@@ -16,16 +16,20 @@ Final performance was judged on three criteria:
 2)  minimum normalised carbon emissions, and
 3)  minimum [grid cost](https://discourse.aicrowd.com/t/announcement-update-to-evaluation-and-leaderboard/8156).
 
-The minimum grid cost is the average of the normalised ramping, $R$ and normalised (1-load factor, $L$), where ramping is the smoothness of the district's load profile i.e. low ramping implies a gradual increase in grid electricity demand even after self-generation from the PV becomes unavailable, and high ramping implies abrupt changes that could lead to unacceptable strain on the grid infrastructure and supply.  $R$ is calculated as the sum of the absolute difference of net electricity consumption between consecutive timesteps. The load factor, $L$ is the efficiency of eelctricity consumption, calculated as the average ratio of monthly average and monthly maximum net electricity consumption.  
+The minimum grid cost is the average of the normalised ramping, $R$ and normalised (1-load factor, $L$), where ramping is the smoothness of the district's load profile i.e. low ramping implies a gradual increase in grid electricity demand even after self-generation from the PV becomes unavailable, and high ramping implies abrupt changes that could lead to unacceptable strain on the grid infrastructure and supply.  $R$ is calculated as the sum of the absolute difference of net electricity consumption between consecutive timesteps. The load factor, $L$ is the efficiency of electricity consumption, calculated as the average ratio of monthly average and monthly maximum net electricity consumption.  
 
 The results were all normalised with respect to the values with no operational battery.
 
 # Overview
-For Annex 37, we wish to assess the range of battery storage control from unsupervised to supervised learning approaches.  Using the CityLearn gym we are able to compare different approaches using a consistent framework and thereby ensure comparability. The template is given in a reinforcement learning format i.e. an agent learns to perform an action so as to maximise a reward, however Annex participants are free to explore different approaches and to adapt the template as necessary.  
+For Annex 37, we wish to assess the range of battery storage control from unsupervised to supervised learning approaches.  Using the CityLearn gym we are able to compare different approaches using a consistent framework and thereby ensure comparability. The template is given in a reinforcement learning format i.e. an agent learns to perform an action so as to maximise a reward, however Annex participants are free to explore different approaches and to adapt the template as necessary. What is important is that we all use the same data and the same battery configuration.
 
 This repository contains a simplified version of the competition code, together with data for 5 buildings as issued for the competition phase 1.  The results of an evaluation are given in terms of the average price cost, average emission cost and average grid cost, all normalised against the case with no battery storage i.e. values greater than 1 suggest worse performance than the no-battery case.
 
+This initial framework is designed to get teams started and to facilitate discussion around the techniques to be used and compared.  The framework will be updated as necessary and further data will be provided.  The ambition is to mimic the CityLearn competition in that models will be trained on observable data but will then be applied to unseen data for assessment and comparison.
+
 # Using the framework
+The following sections outline how to use the framework in a reinforcement learning strategy.
+
 ## Setup
 This project uses Python 3.8.
 ```
