@@ -1,13 +1,7 @@
-from gym.spaces import Box
+from utils import dict_to_action_space
 
 
-def dict_to_action_space(aspace_dict):
-    return Box(low=aspace_dict["low"],
-               high=aspace_dict["high"],
-               dtype=aspace_dict["dtype"])
-
-
-class Agent:
+class Predictor:
     def __init__(self):
         self.num_buildings = None
         self.action_space = None
@@ -24,9 +18,6 @@ class Agent:
         obs = observation["observation"]
         self.num_buildings = len(obs)
         return self.compute_action(obs)
-
-    def raise_aicrowd_error(self, msg):
-        raise NameError(msg)
 
     def compute_action(self, observation):
         """

@@ -21,11 +21,18 @@ The minimum grid cost is the average of the normalised ramping, $R$ and normalis
 The results were all normalised with respect to the values with no operational battery.
 
 # Overview
+[comment]: <> (Todo: add some comment aboutf MPC format, currently mentions reinforment learning format.)
 For Annex 37, we wish to assess the range of battery storage control from unsupervised to supervised learning approaches.  Using the CityLearn gym we are able to compare different approaches using a consistent framework and thereby ensure comparability. The template is given in a reinforcement learning format i.e. an agent learns to perform an action so as to maximise a reward, however Annex participants are free to explore different approaches and to adapt the template as necessary. What is important is that we all use the same data and the same battery configuration.
 
+[comment]: <> (Todo: add some comment about the new dataset, currently 5 buildings.)
 This repository contains a simplified version of the competition code, together with data for 5 buildings as issued for the competition phase 1.  The results of an evaluation are given in terms of the average price cost, average emission cost and average grid cost, all normalised against the case with no battery storage i.e. values greater than 1 suggest worse performance than the no-battery case.
 
 This initial framework is designed to get teams started and to facilitate discussion around the techniques to be used and compared.  The framework will be updated as necessary and further data will be provided.  The ambition is to mimic the CityLearn competition in that models will be trained on observable data but will then be applied to unseen data for assessment and comparison.
+
+[comment]: <> (Todo: add some comment about the training, validation and test split. Below is a placeholder.)
+Teams are free to use any method to train a predictor using the training data provided. The model parameters can be 
+tuned use the validation set. The trained model can then be evaluated on the unseen test set by running the 
+`evaluation.py` file.
 
 # Using the framework
 The following sections outline how to use the framework in a reinforcement learning strategy.
