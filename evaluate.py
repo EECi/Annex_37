@@ -24,8 +24,8 @@ def evaluate(schema_path, tau, **kwargs):
     # Initialise Linear MPC object.
     lp = LinProgModel(env)
     lp.set_battery_propery_data()
-    LinProgModel.tau = tau
-    LinProgModel.generate_LP()
+    lp.tau = tau
+    lp.generate_LP()
 
     # Initialise Predictor object.
 
@@ -54,10 +54,10 @@ def evaluate(schema_path, tau, **kwargs):
         forecasts = predictor.compute_forecast(observations)
 
         # setup and solve predictive Linear Program model of system
-        LinProgModel.set_custom_time_data(*forecasts, current_socs=current_socs)
-        LinProgModel.set_LP_parameters()
-        _,_,_,alpha_star = LinProgModel.solve_LP('SCIPY',False,scipy_options={'method':'highs'})
-        actions: np.array = alpha_star[:,0].reshape(len(LinProgModel.b_inds),1)
+        lp.set_custom_time_data(*forecasts, current_socs=current_socs)
+        lp.set_LP_parameters()
+        _,_,_,alpha_star = lp.solve_LP('SCIPY',False,scipy_options={'method':'highs'})
+        actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
 
         agent_time_elapsed += time.perf_counter() - step_start
 
