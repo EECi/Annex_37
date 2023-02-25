@@ -86,6 +86,10 @@ def evaluate(schema_path, tau, **kwargs):
         # ====================================================================
         observations, _, done, _ = env.step(actions)
 
+        # Update battery states-of-charge
+        # ====================================================================
+        current_socs = np.array(observations)[:,22]
+
         num_steps += 1
 
     print("Evaluation complete.")
