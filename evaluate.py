@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""
+Evaluate performance of predictor model.
+
+Apply linear MPC with provided predictor model to CityLearn evironment
+with specified dataset to evaluate predictor performance.
+"""
+
 import time
 import numpy as np
 
