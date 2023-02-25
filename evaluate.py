@@ -2,13 +2,14 @@
 """
 Evaluate performance of predictor model.
 
-Apply linear MPC with provided predictor model to CityLearn evironment
+Apply linear MPC with provided predictor model to CityLearn environment
 with specified dataset to evaluate predictor performance.
 """
 
 import os
 import time
 import numpy as np
+import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
@@ -62,7 +63,18 @@ def evaluate(schema_path, tau, **kwargs):
         lp_start = time.perf_counter()
         lp.set_custom_time_data(*forecasts, current_socs=current_socs)
         lp.set_LP_parameters()
-        _,_,_,alpha_star = lp.solve_LP('SCIPY',False,scipy_options={'method':'highs'})
+
+        try:
+            _,_,_,alpha_star = lp.solve_LP('SCIPY',False,scipy_options={'method':'highs'})
+        except cp.error.SolverError:
+            print(current_socs)
+            for forecast in forecasts: print(forecast)
+            lp.set_custom_time_data(*forecasts, current_socs=current_socs)
+            lp.generate_LP()
+            lp.set_LP_parameters()
+            _,_,_,alpha_star = lp.solve_LP('SCIPY',True,scipy_options={'method':'highs'})
+            raise Exception("LP solver failed. Check your forecasts. If issue persists please contact organizers.")
+
         actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
         lp_solver_time_elapsed += time.perf_counter() - lp_start
 
@@ -81,7 +93,7 @@ def evaluate(schema_path, tau, **kwargs):
 
     metrics = env.evaluate()  # Provides a break down of other metrics that might be of interest.
     if np.any(np.isnan(metrics['value'])):
-        raise ValueError("Some of the metrics returned are NaN, please contant organizers.")
+        raise ValueError("Some of the metrics returned are NaN, please contact organizers.")
 
     print("=========================Results=========================")
     print(f"Price Cost: {metrics.iloc[5].value}")
@@ -99,12 +111,8 @@ def evaluate(schema_path, tau, **kwargs):
 if __name__ == '__main__':
     import warnings
 
-    # todo: remove the citylearn_challenge_2022_phase_1 dataset from the data folder
-    # todo: add the new test dataset to the data folder
-    # todo: change the schema path to the test dataset.
-
     tau = 12 # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('citylearn_challenge_2022_phase_1') # dataset directory
+    dataset_dir = os.path.join('example','train') # dataset directory
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 
