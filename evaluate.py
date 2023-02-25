@@ -10,10 +10,6 @@ import os
 import time
 import numpy as np
 
-"""
-Please add code to log your agent's performance as desired.
-"""
-
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
 from predictor import Predictor
@@ -65,6 +61,10 @@ def evaluate(schema_path, tau, **kwargs):
 
         agent_time_elapsed += time.perf_counter() - step_start
 
+        # ====================================================================
+        # insert your logging code here
+        # ====================================================================
+
         # Apply action to environment.
         observations, _, done, _ = env.step(actions)
 
@@ -73,6 +73,7 @@ def evaluate(schema_path, tau, **kwargs):
             print(f"Num Steps: {num_steps}")
 
     print("Evaluation complete.")
+
 
     metrics = env.evaluate()  # Provides a break down of other metrics that might be of interest.
     if np.any(np.isnan(metrics['value'])):
@@ -84,13 +85,20 @@ def evaluate(schema_path, tau, **kwargs):
     print(f"Grid Cost:{np.mean([metrics.iloc[0].value, metrics.iloc[6].value])}")
     print(f"Total time taken by agent: {agent_time_elapsed}s")
 
+    # ========================================================================
+    # insert your logging code here
+    # ========================================================================
+
+
 
 if __name__ == '__main__':
     # todo: remove the citylearn_challenge_2022_phase_1 dataset from the data folder
     # todo: add the new test dataset to the data folder
     # todo: change the schema path to the test dataset.
 
-    schema_path = './data/citylearn_challenge_2022_phase_1/schema.json' # path to dataset schema
     tau = 48 # model prediction horizon (number of timesteps of data predicted)
+    dataset_dir = os.path.join('citylearn_challenge_2022_phase_1') # dataset directory
+
+    schema_path = os.path.join('data',dataset_dir,'schema.json')
 
     evaluate(schema_path, tau)
