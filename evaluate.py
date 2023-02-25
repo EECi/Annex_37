@@ -86,7 +86,7 @@ def evaluate(schema_path, tau, **kwargs):
     print("=========================Results=========================")
     print(f"Price Cost: {metrics.iloc[5].value}")
     print(f"Emission Cost: {metrics.iloc[2].value}")
-    print(f"Grid Cost:{np.mean([metrics.iloc[0].value, metrics.iloc[6].value])}")
+    print(f"Grid Cost: {np.mean([metrics.iloc[0].value, metrics.iloc[6].value])}")
     print(f"Total time taken by Predictor: {forecast_time_elapsed}s")
     print(f"Total time taken by LP solver: {lp_solver_time_elapsed}s")
 
