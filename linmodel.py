@@ -30,16 +30,19 @@ class LinProgModel():
         self.delta_t = self.env.seconds_per_time_step/3600
 
 
-    def set_battery_propery_data(self, b_inds: List[int]):
+    def set_battery_propery_data(self, b_inds: List[int] = None):
         """Set battery property data from CityLearnEnv object.
         Note: efficiency and power capacity curves are neglected
 
         Args:
-            b_inds (List[int]): indices of buildings to grab data for (relative to self.env.buildings)
+            b_inds (List[int], optional): indices of buildings to grab data for (relative to self.env.buildings).
+                If no indices are provided, all buildings are used.
         """
         # get battery property specifications from schema.json
 
-        self.b_inds = b_inds
+        if b_inds is not None: self.b_inds = b_inds
+        else: self.b_inds = range(len(self.b_names))
+
         self.buidlings = [self.env.buildings[ind] for ind in self.b_inds]
 
         self.battery_efficiencies = np.array([b.electrical_storage.efficiency\
