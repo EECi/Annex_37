@@ -8,7 +8,7 @@ This class must have the following methods:
         performs any initial setup you might want to do.
     - compute_forecast(observation), which executes your prediction method,
         creating timeseries forecasts for [building electrical loads,
-        building solar pv generaiton powers, grid electricity price, grid
+        building solar pv generation powers, grid electricity price, grid
         carbon intensity] given the current observation.
 
 You may wish to implement additional methods to make your model code neater.
@@ -86,15 +86,16 @@ class Predictor:
         else:
             predict_inds = [t+1 for t in range(self.tau)]
 
+            # note, pricing & carbon predictions of all zeros can lead to issues, so clip to 0.01
             load_lines = [np.poly1d(np.polyfit([-1,0],[self.prev_vals['loads'][b],current_vals['loads'][b]],deg=1)) for b in range(self.num_buildings)]
-            predicted_loads = np.array([line(predict_inds) for line in load_lines]).clip(0)
+            predicted_loads = np.array([line(predict_inds) for line in load_lines]).clip(0.01)
 
             pv_gen_lines = [np.poly1d(np.polyfit([-1,0],[self.prev_vals['pv_gens'][b],current_vals['pv_gens'][b]],deg=1)) for b in range(self.num_buildings)]
             predicted_pv_gens = np.array([line(predict_inds) for line in pv_gen_lines]).clip(0)
 
-            predicted_pricing = np.poly1d(np.polyfit([-1,0],[self.prev_vals['pricing'],current_vals['pricing']],deg=1))(predict_inds).clip(0)
+            predicted_pricing = np.poly1d(np.polyfit([-1,0],[self.prev_vals['pricing'],current_vals['pricing']],deg=1))(predict_inds).clip(0.01)
 
-            predicted_carbon = np.poly1d(np.polyfit([-1,0],[self.prev_vals['carbon'],current_vals['carbon']],deg=1))(predict_inds).clip(0)
+            predicted_carbon = np.poly1d(np.polyfit([-1,0],[self.prev_vals['carbon'],current_vals['carbon']],deg=1))(predict_inds).clip(0.01)
 
 
         self.prev_vals = current_vals
