@@ -17,10 +17,10 @@ class LinProgModel():
             env (CityLearnEnv): pre-constructred environment object to use
         """
 
-        if schema and env:
+        if schema is not None and env is not None:
             raise ValueError("Cannot provide both a schema and a CityLearnEnv object.")
 
-        if schema:
+        if schema is not None:
             self.env = CityLearnEnv(schema) # construct CityLearn environment
         else:
             self.env = env
@@ -43,16 +43,16 @@ class LinProgModel():
         if b_inds is not None: self.b_inds = b_inds
         else: self.b_inds = range(len(self.b_names))
 
-        self.buidlings = [self.env.buildings[ind] for ind in self.b_inds]
+        self.buildings = [self.env.buildings[ind] for ind in self.b_inds]
 
         self.battery_efficiencies = np.array([b.electrical_storage.efficiency\
-            for b in self.buidlings])
+            for b in self.buildings])
         self.battery_loss_coeffs = np.array([b.electrical_storage.loss_coefficient\
-            for b in self.buidlings])
+            for b in self.buildings])
         self.battery_max_powers = np.array([b.electrical_storage.available_nominal_power\
-            for b in self.buidlings])
+            for b in self.buildings])
         self.battery_capacities = np.array([b.electrical_storage.capacity\
-            for b in self.buidlings])
+            for b in self.buildings])
 
 
     def set_time_data_from_env(self, tau: int = None, t_start: int = None,
@@ -74,7 +74,7 @@ class LinProgModel():
         # (compare to full information global LP performance) - in some ways this is VoI-ish as it
         # can give the value of extending the perfect forecasting horizon...
 
-        if not self.buidlings:
+        if not self.buildings:
             raise NameError("Battery data must be contructed before providing time data.")
 
         if not t_start: self.t_start = 0
@@ -90,18 +90,18 @@ class LinProgModel():
             self.battery_initial_socs = current_socs
         else: # note this will default to zero if not specified in schema
             self.battery_initial_socs = np.array([b.electrical_storage.initial_soc\
-                for b in self.buidlings])
+                for b in self.buildings])
 
         self.elec_loads = np.array(
             [b.energy_simulation.non_shiftable_load[self.t_start+1:self.t_start+self.tau+1]\
-                for b in self.buidlings])
+                for b in self.buildings])
         self.solar_gens = np.array(
             [b.pv.get_generation(b.energy_simulation.solar_generation)[self.t_start+1:self.t_start+self.tau+1]\
-                for b in self.buidlings])
+                for b in self.buildings])
         self.prices = np.array(
-            self.buidlings[0].pricing.electricity_pricing[self.t_start+1:self.t_start+self.tau+1])
+            self.buildings[0].pricing.electricity_pricing[self.t_start+1:self.t_start+self.tau+1])
         self.carbon_intensities = np.array(
-            self.buidlings[0].carbon_intensity.carbon_intensity[self.t_start+1:self.t_start+self.tau+1])
+            self.buildings[0].carbon_intensity.carbon_intensity[self.t_start+1:self.t_start+self.tau+1])
 
 
     def set_custom_time_data(self, elec_loads: np.array, solar_gens: np.array, prices: np.array,
@@ -124,22 +124,25 @@ class LinProgModel():
                 period before t_start. Defaults to None.
         """
 
-        if not hasattr(self,'buidlings'): raise NameError("Battery data must be contructed before providing time data.")
+        if not hasattr(self,'buildings'): raise NameError("Battery data must be contructed before providing time data.")
 
         assert elec_loads.shape[0] == solar_gens.shape[0] == len(self.buildings),\
             "Data must be provided for all buildings used in model."
         assert elec_loads.shape[1] == solar_gens.shape[1] == prices.shape[0] == carbon_intensities.shape[0],\
             "Data provided must have consistent time duration."
 
-        self.tau = elec_loads.shape[1]
-        assert self.tau > 0, "Must provide at least one period of data"
+        if not hasattr(self,'tau'):
+            self.tau = elec_loads.shape[1]
+            assert self.tau > 0, "Must provide at least one period of data"
+        else:
+            assert elec_loads.shape[1] == self.tau, "Predicted time series must have length equal to specified planning horizon, tau."
 
         # initialise battery state for period before t_start
         if current_socs is not None:
             self.battery_initial_socs = current_socs
         else: # note this will default to zero if not specified in schema
             self.battery_initial_socs = np.array([b.electrical_storage.initial_soc\
-                for b in self.buidlings])
+                for b in self.buildings])
 
         self.elec_loads = elec_loads
         self.solar_gens = solar_gens
@@ -159,13 +162,13 @@ class LinProgModel():
             objective contributions is overall objective of LP.
         """
 
-        if not hasattr(self,'buidlings'): raise NameError("Building properties must be set before LP can be generated.")
+        if not hasattr(self,'buildings'): raise NameError("Building properties must be set before LP can be generated.")
         if not hasattr(self,'tau'): raise NameError("Planning horizon must be set before LP can be generated.")
 
         assert True in list(objective_dict.values()), "Objective cannot be empty, `objective_dict` must contain at least one 'True' entry"
         self.objective_dict = objective_dict
 
-        self.N = len(self.buidlings)
+        self.N = len(self.buildings)
         assert self.N > 0
 
 
