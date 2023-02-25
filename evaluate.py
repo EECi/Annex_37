@@ -33,7 +33,7 @@ def evaluate(schema_path, tau, **kwargs):
     # insert your import & setup code for your predictor here.
     # ========================================================================
 
-    predictor = Predictor(...)
+    predictor = Predictor(len(lp.b_inds), tau)
 
 
     # Initialise control loop.
