@@ -1,3 +1,10 @@
+"""
+Implementation of Linear Programming controller class for CityLearn model.
+
+LinProgModel class is used to construct, hold, and solve LP models of the
+CityLearn environment for use in a Linear MPC controller.
+"""
+
 from citylearn.citylearn import CityLearnEnv
 import numpy as np
 import cvxpy as cp
