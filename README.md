@@ -1,123 +1,124 @@
 
 # Annex 37
+
 ## Smart design and control of energy storage systems 
 
 The aim of [Annex 37](https://iea-es.org/task-37/) is to investigate smart design and control strategies for energy storage systems at both the supply side and demand side. As part of Sub-task A - Demand and Supply Prediction - we aim to compare techniques for working with real-time demand data for optimisation of battery storage.  This repository contains data and a template for a reinforcement learning approach to be used for comparison across techniques.
 
-# The CityLearn 2022 competition
 
-The approach is directly based on the [CityLearn 2022 challenge](https://www.aicrowd.com/challenges/neurips-2022-citylearn-challenge) run as part of [NeurIPS 2022](https://nips.cc).  In the challenge, international teams competed to minimise costs and carbon emissions across a group of residential buildings equipped with solar PV and battery storage. The teams were able to use rule-based controllers, model predictive controllers or reinforcement learning with single agent or multi agent set-up.  The competition used [CityLearn](https://github.com/intelligent-environments-lab/CityLearn/tree/citylearn_2022), an open source OpenAI gym environment or the implementation of multi-agent reinforcement learning for building energy coordination and demand response in cities.
+## Proposed Task
+
+As part of the Sub-task A work package it is proposed to investigate the role of data in enabling optimised battery scheduling in smart buildings with distributed generation (solar pv) & battery storage.
+
+This investigation will seek to analyse the impact of different aspects of data usage on the development of prediction/forecasting methods for use within Linear Model Predictive Control (MPC) algorithms for optimising battery scheduling in micro-grids. This is done to provide a common framework within which the impact of data on the performance of building energy system control can be analysed. The analysis will be conducted using the [CityLearn](https://github.com/intelligent-environments-lab/CityLearn) model of electrical micro-grids composed of building loads, considering only the direct electricity usage of buildings (i.e. not accounting for heating related electrical demand). A novel dataset comprised of electrical demand data from the Cambridge University Estates, and open weather, carbon, and pricing data will be used for the analysis.
+
+The investigation seeks to answer questions such as the following:
+- How much data is needed to achieve performant optimal scheduling systems?
+- What is the cost-performance trade-off when acquiring data to train forecasting models for building control?
+- Which variables are most important to forecast accurately to achieve good performance? Or, where should forecasting effort be expended and where can it be economised?
+- When and where should measurements be made to best train forecasting models?
+- How do different methods compare in terms of data efficiency, and how the most be made of available data?
+
+Participants are encouraged to explore different forecasting methods and different aspects of the impact of data on the optimal scheduling task.
+
+
+## The CityLearn Environment
+
+CityLearn is a framework for studying the performance of control algorithms for optimising battery scheduling in micro-grids of building with both distributed solver pv generation & battery storage, with a particular focus on Reinforcement Learning (RL) based methods.
+
+The CityLearn environment is used in annual challenges hosted by the [Intelligent Environment Lab](https://www.ie-lab.org/) to explore different aspects of RL algorithm design and behaviour. In the [CityLearn 2022 challenge](https://www.aicrowd.com/challenges/neurips-2022-citylearn-challenge), run as part of [NeurIPS 2022](https://nips.cc), international teams competed to minimise costs and carbon emissions across a group of residential buildings equipped with solar PV and battery storage. The teams implemented a variety of control strategies, including: rule-based controllers, model predictive controllers or reinforcement learning with single agent or multi agent set-up.
 
 In the first phase of the competition, demand data for 5 buildings were provided and teams were able to train their models on the supplied data.  In phase 2, the models were applied to an unseen dataset for another 5 buildings, and in phase 3 to an unseen dataset for a final 7 buildings.  The final ranking was calculated based on the performance over all 3 datasets.
 
 Final performance was judged on three criteria:
 
-1)  minimum normalised cost of electricity taken from the grid supply,
-2)  minimum normalised carbon emissions, and
-3)  minimum [grid cost](https://discourse.aicrowd.com/t/announcement-update-to-evaluation-and-leaderboard/8156).
+1)  minimum normalised cost of electricity taken from the grid supply
+2)  minimum normalised carbon emissions
+3)  minimum [grid cost](https://discourse.aicrowd.com/t/announcement-update-to-evaluation-and-leaderboard/8156)
 
-The minimum grid cost is the average of the normalised ramping, $R$ and normalised (1-load factor, $L$), where ramping is the smoothness of the district's load profile i.e. low ramping implies a gradual increase in grid electricity demand even after self-generation from the PV becomes unavailable, and high ramping implies abrupt changes that could lead to unacceptable strain on the grid infrastructure and supply.  $R$ is calculated as the sum of the absolute difference of net electricity consumption between consecutive timesteps. The load factor, $L$ is the efficiency of electricity consumption, calculated as the average ratio of monthly average and monthly maximum net electricity consumption.  
+The objective contributions were all normalised with respect to the values with no operational battery, and the overall objective was an evenly weighted sum of the three contributions.
 
-The results were all normalised with respect to the values with no operational battery.
 
-# Overview
-[comment]: <> (Todo: add some comment aboutf MPC format, currently mentions reinforment learning format.)
-For Annex 37, we wish to assess the range of battery storage control from unsupervised to supervised learning approaches.  Using the CityLearn gym we are able to compare different approaches using a consistent framework and thereby ensure comparability. The template is given in a reinforcement learning format i.e. an agent learns to perform an action so as to maximise a reward, however Annex participants are free to explore different approaches and to adapt the template as necessary. What is important is that we all use the same data and the same battery configuration.
+## Explanation of Linear MPC
 
-[comment]: <> (Todo: add some comment about the new dataset, currently 5 buildings.)
-This repository contains a simplified version of the competition code, together with data for 5 buildings as issued for the competition phase 1.  The results of an evaluation are given in terms of the average price cost, average emission cost and average grid cost, all normalised against the case with no battery storage i.e. values greater than 1 suggest worse performance than the no-battery case.
+For a brief overview of how Linear Model Predictive Control works, and how it is implemented in the context of the CityLearn environment, please see [this tutorial](https://colab.research.google.com/drive/1Qzs4GhL-OZCY3YoFsVSzA8_BpTnL518P?usp=sharing).
+
+
+## Available Data
+
+For the analysis, hourly-resolved building electrical load from the Cambridge University Estates portfolio will be used. Metering data from 30 buildings of significant varying behaviours for the 10 year period 2010-2019 (inclusive) are available. This data can be sub-divided and packaged into CityLearn compatible datasets to suit the different forecasting methods and analyses that are chosen to be studied.
+
+Initially three example datasets: `train` (2010-2015), `validate` (2016-2017), and `test` (2018-2019); consisting of a set of 6 buildings of similar mean loads are provided.
+
+<br>
+
+# Using the framework
+
+This codebase provides a framework for integrating forecasting methods into a Linear MPC controller/agent and applying it to the CityLearn environment. Using a consistent framework allows for the comparability of different approaches taken by different participants. Participants are free to adapt the framework to suit their chosen approach, however **it is important that all participants use the provided configurations of the CityLearn environment (specified by the dataset `schema.json`), so that the performance of different methods of controlling the environment are comparable**.
 
 This initial framework is designed to get teams started and to facilitate discussion around the techniques to be used and compared.  The framework will be updated as necessary and further data will be provided.  The ambition is to mimic the CityLearn competition in that models will be trained on observable data but will then be applied to unseen data for assessment and comparison.
 
-[comment]: <> (Todo: add some comment about the training, validation and test split. Below is a placeholder.)
-Teams are free to use any method to train a predictor using the training data provided. The model parameters can be 
-tuned use the validation set. The trained model can then be evaluated on the unseen test set by running the 
-`evaluation.py` file.
+Participants can train their forecasting method/predictor using the training data provided. The model parameters can be tuned using the validation data provided. The fully trained/specified model can then be evaluated on the 'unseen' test data.
 
-# Using the framework
-The following sections outline how to use the framework in a reinforcement learning strategy.
+## Task
+
+The task for participants is to implement a suitable forecasting method(s) for use with the Linear MPC battery scheduling controller, see [Predictor Implementation](#predictor-implementation), and evaluate its performance, see [Evaluation](#evaluation), to gain insight into the role of data in enabling optimised battery scheduling in smart buildings.
+
 
 ## Setup
-This project uses Python 3.8.
+This project uses Python 3.8. Setup your Python environment for the project using the following commands. (See [conda docs](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
+
 ```
+conda create -n myenv python=3.8
 pip install -r requirements.txt
 ```
 
-## Method implementation
-Implement your method in the `compute_action` function in the `agent.py` file:
 
-```python
-def compute_action(self, observation):
-    """
-    Below is the suggested format for this function:
-    - Use the observation to compute the reward.
-    - Update the agent parameters using the reward.
-    - Compute the action for the observation
+## Predictor Implementation
 
-    Inputs:
-        observation - List of observations from the env: observation[building_index, observation_index]
-    Returns:
-        actions - List of actions: actions[building_index]
-            eg. for 5 buildings each with action 0.5 the format is as follows [[0.5], [0.5], [0.5], [0.5], [0.5]]
-            Actions are between 0 and 1.
+Participants should implement their forecasting method/predictor in the `Predictor` class contained in `predictor.py`.
 
-    Please make sure the action for each building is in the same order as the observations for each building.
+This class requires two methods:
+1. ```__init__(self, N: int, tau: int)```, which performs any initial setup of the predictor required, such as loading in a trained configuration from a file.
+2. ```compute_forecast(self, observations)```,  which implements the forecasting. This method must take in an observation array (as returned from the CityLearn environment, see [Observations](#observations)) and return a set of forecasts for (building loads, solar pv generation powers, grid electricity pricing, grid electricity carbon intensity), as specified in the method docstring.
 
-    """
-    assert self.num_buildings is not None
+A dummy forecasting method is provided to illustrate how this class works.
 
-    # Define you reward here
-    # ==============================================================================================================
-    rewards = [0 for _ in range(self.num_buildings)]
-    # ==============================================================================================================
+Participants are free to implement additional methods for their `Predictor` class as suits their approach.
 
-    # Update your agent parameters here
-    # ==============================================================================================================
+For training forecasting methods, the training dataset is directly available in the `data` directory.
 
-    # ==============================================================================================================
-
-    # Compute your action here
-    # ==============================================================================================================
-    actions = [[0] for _ in range(self.num_buildings)]
-    # ==============================================================================================================
-    return actions
-```
-
- 
-
-To track variables you may want to define attributes with the `__init__` function:
-```python
-    def __init__(self):
-        self.num_buildings = None
-        self.action_space = None
-
-        # You may want to track some variables, eg. observations or actions from previous time steps. Do so here.
-        # ==============================================================================================================
-        self.prev_observation = None
-        # ==============================================================================================================
-```
-
-Feel free to add attributes and methods to the `Agent` class as required.  You may also want to implement the agent 
-resetting behaviour in the `register_reset` function.
 
 ## Evaluation
-Select the number of episodes you want to train your agent for, and the dataset you want to use by editing the 
-`Constants` class in the `local_evaluation.py` file.
 
-```python
-class Constants:
-    episodes = 1
-    schema_path = './data/citylearn_challenge_2022_phase_1/schema.json'
+The performance of a given prediction method on the task should be evaluated by running `evaluate.py`,
+
+```
+python3 evaluate.py
 ```
 
-Please edit the file to log the agent's behaviour as desired. 
+This file sets up the CityLearn environment and Linear MPC controller, and executes the control loop, before evaluating the performance and returning the results.
 
-The price, emission and grid costs are relative to the 
-value for the system without battery storage i.e., a value of 1 means that the system has the same performance as a system without battery storage. The lower the cost, the better.
+Please edit the file to log the agent's behaviour as desired.
+
+The price, emission and grid costs are relative to the values achieved if the system is operated without battery storage i.e., a value of 1 means that the system has the same performance as a system without battery storage. The objective is to minimize an evenly weighted sum of these three contributions.
+
+
+## System Linear Programming model specification
+
+`linmodel.py` implements the Linear Programming model of the CityLearn environment. Participants are welcomed to have a look at this implementation to see how the model works, however they should not have to interact with this code. A mathematical description of how the model works is available in [this tutorial](https://colab.research.google.com/drive/1Qzs4GhL-OZCY3YoFsVSzA8_BpTnL518P?usp=sharing).
+
+Note: if participants wish to use different objective functions for the Linear MPC controller some adaptation of this file (specifically the `generate_LP` method) and the control loop will be required. Please contact the organisers for help with this.
+
+
+## Utils
+
+A number of helpful functions for interacting with the CityLearn environment and provided datasets are provided in the `utils` directory.
+
 
 ## Observations
 
-This is a key to observation identifiers used in the gym environment.
+The `observations` data returned by the CityLearn environment when an action is applied consists of a list of observation values for each building in the model, which are indexed as follows:
 
 | Index      | Name | Description | Unit |
 | ----------- | ----------- | ----------- | ----------- |
@@ -150,9 +151,17 @@ This is a key to observation identifiers used in the gym environment.
 | 26      | Electricity Price (Predicted 12h)       | Electricity rate predicted 12 hours ahead.     |$/kWh|
 | 27      | Electricity Price (Predicted 24h)       | Electricity rate predicted 24 hours ahead.      |$/kWh|
 
+**Note: the prediction observations are provided in order to ensure compatibility of the dataset with the CityLearn environment, however as these are perfect predictions taken from the true data, their use for the development of forecasting methods is considered cheating.**
+
+<br>
+
+## Additional Documentation
+
+[Annex 37 Sub-task A presentation (Feb 16th 2023) slides](https://docs.google.com/presentation/d/1bR0BVOM6U2C5XhC6FKe8YhmrMTmw-Vnx/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+
 ## Further information
 
 [Paper describing development of the CityLearn gym environment](https://arxiv.org/abs/2012.10504)
 
-[The challenge winners](https://arxiv.org/abs/2212.01939)
-
+[CityLearn 2022 challenge winners](https://arxiv.org/abs/2212.01939)
