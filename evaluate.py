@@ -49,7 +49,7 @@ def evaluate(schema_path, tau, **kwargs):
     # Execute control loop.
     while not done:
         if num_steps % 100 == 0:
-            print(f"Num Steps: {num_steps}")
+            print(f"Num Steps: {num_steps} ({np.round(100*num_steps/env.time_steps,1)}%)")
 
         # Compute MPC action.
         # ====================================================================
@@ -63,18 +63,7 @@ def evaluate(schema_path, tau, **kwargs):
         lp_start = time.perf_counter()
         lp.set_custom_time_data(*forecasts, current_socs=current_socs)
         lp.set_LP_parameters()
-
-        try:
-            _,_,_,alpha_star = lp.solve_LP('SCIPY',False,scipy_options={'method':'highs'})
-        except cp.error.SolverError:
-            print(current_socs)
-            for forecast in forecasts: print(forecast)
-            lp.set_custom_time_data(*forecasts, current_socs=current_socs)
-            lp.generate_LP()
-            lp.set_LP_parameters()
-            _,_,_,alpha_star = lp.solve_LP('SCIPY',True,scipy_options={'method':'highs'})
-            raise Exception("LP solver failed. Check your forecasts. If issue persists please contact organizers.")
-
+        _,_,_,_,alpha_star = lp.solve_LP()
         actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
         lp_solver_time_elapsed += time.perf_counter() - lp_start
 
@@ -116,7 +105,7 @@ if __name__ == '__main__':
     import warnings
 
     tau = 12 # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('example','train') # dataset directory
+    dataset_dir = os.path.join('example','test') # dataset directory
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 

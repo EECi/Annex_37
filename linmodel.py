@@ -188,7 +188,7 @@ class LinProgModel():
         self.e_grids_without = cp.sum(self.elec_loads_param - self.solar_gens_param, axis=0)
         self.price_without = self.e_grids_without @ self.prices_param
         self.carbon_without = cp.pos(self.e_grids_without) @ self.carbon_intensities_param
-        self.ramp_without = cp.sum(cp.abs(self.e_grids_without[1:]-self.e_grids_without[:-1]))
+        self.ramp_without = cp.norm(self.e_grids_without[1:]-self.e_grids_without[:-1],1)
 
 
         # set up constraints
@@ -243,11 +243,11 @@ class LinProgModel():
 
         objective_contributions = []
         if objective_dict['price']:
-            objective_contributions.append((self.e_grids @ self.prices_param)/self.price_without)
+            objective_contributions.append((self.e_grids @ self.prices_param)/cp.maximum(self.price_without,1))
         if objective_dict['carbon']:
-            objective_contributions.append((self.xi @ self.carbon_intensities_param)/self.carbon_without)
+            objective_contributions.append((self.xi @ self.carbon_intensities_param)/cp.maximum(self.carbon_without,1))
         if objective_dict['ramping']:
-            objective_contributions.append(cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/self.ramp_without)
+            objective_contributions.append(cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/cp.maximum(self.ramp_without,1))
         objective_contributions = cp.vstack(objective_contributions) # convert to cvxpy array
 
         self.obj = cp.sum(objective_contributions)/objective_contributions.size
@@ -274,7 +274,7 @@ class LinProgModel():
         self.carbon_intensities_param.value = self.carbon_intensities
 
 
-    def solve_LP(self, solver: str, verbose: bool = False, **kwargs):
+    def solve_LP(self, **kwargs):
         """Solve LP model of specified problem.
 
         Args:
@@ -291,25 +291,34 @@ class LinProgModel():
 
         if not hasattr(self,'problem'): raise ValueError("LP model has not been generated.")
 
-        self.problem.solve(
-            solver=solver,
-            verbose=verbose,
-            **kwargs
-        )
+        if 'solver' not in kwargs: kwargs['solver'] = 'SCIPY'
+        if 'verbose' not in kwargs: kwargs['verbose'] = False
+        if kwargs['solver'] == 'SCIPY': kwargs['scipy_options'] = {'method':'highs'}
+        if kwargs['verbose'] == True: kwargs['scipy_options'].update({'disp':True})
+
+        try:
+            self.problem.solve(**kwargs)
+        except cp.error.SolverError:
+            print("Current SoCs: ", self.current_socs.value)
+            print("Building loads:", self.elec_loads_param.value)
+            print("Solar generations: ", self.solar_gens_param.value)
+            print("Pricing: ", self.prices_param.value)
+            print("Carbon intensities: ", self.carbon_intensities_param.value)
+            raise Exception("LP solver failed. Check your forecasts. Try resolving in verbose mode. If issue persists please contact organizers.")
+
 
         # prep results
         self.price_contr = self.e_grids.value @ self.prices if self.objective_dict['price'] else np.NaN
         self.carbon_contr = np.clip(self.e_grids.value,0,None) @ self.carbon_intensities if self.objective_dict['carbon'] else np.NaN
         self.ramp_contr = np.sum(np.abs(self.e_grids.value[1:]-self.e_grids.value[:-1])) if self.objective_dict['ramping'] else np.NaN
-        obj_check = np.nanmean([self.price_contr/self.price_without.value,\
-            self.carbon_contr/self.carbon_without.value,\
-                self.ramp_contr/self.ramp_without.value])
-        objective_breakdown = [self.price_contr/self.price_without.value,\
-            self.carbon_contr/self.carbon_without.value,\
-                self.ramp_contr/self.ramp_without.value,\
-                    obj_check]
+        objective_breakdown = [
+            self.price_contr/np.maximum(self.price_without.value,1),
+            self.carbon_contr/np.maximum(self.carbon_without.value,1),
+            self.ramp_contr/np.maximum(self.ramp_without.value,1)
+            ]
+        obj_check = np.nanmean(objective_breakdown)
 
-        return self.objective.value, objective_breakdown, self.SoC.value, self.alpha.value
+        return self.objective.value, objective_breakdown, obj_check, self.SoC.value, self.alpha.value
 
 
     def get_LP_data(self, solver: str, **kwargs):
