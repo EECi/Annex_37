@@ -20,10 +20,19 @@ import numpy as np
 class Predictor:
 
     def __init__(self, N: int, tau: int):
-        """Initialise Prediction object and perform setup."""
+        """Initialise Prediction object and perform setup.
+        
+        Args:
+            N (int): number of buildings in model, hence number of buildings
+                requiring forecasts.
+            tau (int): length of planning horizon (number of time instances
+                into the future to forecast).
+                Note: with some adjustment of the codebase variable length
+                planning horizons can be implemented.
+        """
 
         self.num_buildings = N
-        self.tau = tau # length of planning horizon
+        self.tau = tau
 
         # Load in pre-computed prediction model.
         # ====================================================================

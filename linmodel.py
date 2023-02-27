@@ -21,7 +21,7 @@ class LinProgModel():
             raise ValueError("Cannot provide both a schema and a CityLearnEnv object.")
 
         if schema is not None:
-            self.env = CityLearnEnv(schema) # construct CityLearn environment
+            self.env = CityLearnEnv(schema)
         else:
             self.env = env
 
@@ -72,7 +72,7 @@ class LinProgModel():
         """
         # useful for investigating how the time horizon of perfect information MPC affects performance
         # (compare to full information global LP performance) - in some ways this is VoI-ish as it
-        # can give the value of extending the perfect forecasting horizon...
+        # can give the value of extending the perfect forecasting horizon
 
         if not self.buildings:
             raise NameError("Battery data must be contructed before providing time data.")
@@ -233,14 +233,6 @@ class LinProgModel():
             self.xi = cp.Variable(self.tau, nonneg=True)
             self.constraints += [self.xi >= self.e_grids] # for t \in [t+1,t+tau]
 
-        # at this point I could introduce a differential buy/sell pricing based objective
-        # ...
-
-        # self.obj = ((self.e_grids @ self.prices)/self.price_without\
-        #         + (self.xi @ self.carbon_intensities)/self.carbon_without\
-        #             + cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/self.ramp_without\
-        #                 )/3
-
         objective_contributions = []
         if objective_dict['price']:
             objective_contributions.append((self.e_grids @ self.prices_param)/cp.maximum(self.price_without,1))
@@ -278,15 +270,14 @@ class LinProgModel():
         """Solve LP model of specified problem.
 
         Args:
-            solver (str): solver to use
-            verbose (bool, optional): verbose flag for solver. Defaults to False.
-            **kwargs: optional keyword arguments for solver settings
+            **kwargs: optional keyword arguments for solver settings.
 
         Returns:
-            self.objective.value (float): optimised objective value
-            objective_breakdown (List[float]): breakdown of objective contributions (price, carbon, ramping)
-            self.SoC.value (np.array[float]): optimised states of charge
-            self.alpha.value (np.array[float]): optimised fractional battery control actions
+            self.objective.value (float): optimised objective value.
+            objective_breakdown (List[float]): breakdown of objective contributions (price, carbon, ramping).
+            obj_check (float): optimised objective value computed using original inputs for checking.
+            self.SoC.value (np.array[float]): optimised states of charge of batteries.
+            self.alpha.value (np.array[float]): optimised fractional battery control actions.
         """
 
         if not hasattr(self,'problem'): raise ValueError("LP model has not been generated.")
@@ -326,11 +317,11 @@ class LinProgModel():
         as specified in https://www.cvxpy.org/api_reference/cvxpy.problems.html#cvxpy.Problem.get_problem_data
 
         Args:
-            solver (str): desired solver
-            kwargs (dict): keywords arguments for cvxpy.Problem.get_problem_data()
+            solver (str): desired solver.
+            kwargs (dict): keywords arguments for cvxpy.Problem.get_problem_data().
 
         Returns:
-            solver_data: data passed to solver in solve call, as specified in link to docs above
+            solver_data: data passed to solver in solve call, as specified in link to docs above.
         """
 
         if not hasattr(self,'problem'): raise NameError("LP model has not been generated.")
