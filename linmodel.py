@@ -295,7 +295,7 @@ class LinProgModel():
             print("Solar generations: ", self.solar_gens_param.value)
             print("Pricing: ", self.prices_param.value)
             print("Carbon intensities: ", self.carbon_intensities_param.value)
-            raise Exception("LP solver failed. Check your forecasts. Try resolving in verbose mode. If issue persists please contact organizers.")
+            raise Exception("LP solver failed. Check your forecasts. Try solving in verbose mode. If issue persists please contact organizers.")
 
 
         # prep results
