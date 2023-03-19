@@ -7,8 +7,12 @@ import lightning.pytorch as pl
 
 
 class Data(Dataset):
-    def __init__(self, building_index=5, L=48, T=24, version='train'):
+    def __init__(self, building_index=5, L=48, T=24, version='train', dataset_type='load'):
         super().__init__()
+        self.dataset_type = dataset_type
+        self.type2idx = {'load': 0, 'solar': 1, 'price': 2, 'carbon': 3}
+        self.type_idx = self.type2idx[dataset_type]
+
         dataset_dir = os.path.join('data', 'example')
         building = pd.read_csv(os.path.join(dataset_dir, version, f'UCam_Building_{building_index}.csv'))
         load = building['Equipment Electric Power [kWh]']
@@ -40,24 +44,30 @@ class Data(Dataset):
         return len(self.x)
 
     def __getitem__(self, idx):
-        return self.x[idx][0], self.y[idx][0]   # todo: just return load: 1d for now
+        return self.x[idx][self.type_idx], self.y[idx][self.type_idx]
 
 
 class Model(pl.LightningModule):
-    def __init__(self, input_dim, output_dim, learning_rate=1e-3):
+    def __init__(self, input_dim, output_dim, hidden_layers=(128, 256), learning_rate=1e-3):
         super().__init__()
         self.learning_rate = learning_rate
+        self.h = hidden_layers
 
-        # self.fc1 = torch.nn.Linear(input_dim, output_dim)
-        self.fc1 = torch.nn.Linear(input_dim, 128)
-        self.fc2 = torch.nn.Linear(128, 128)
-        self.fc3 = torch.nn.Linear(128, output_dim)
+        if self.h:
+            self.input_layer = torch.nn.Linear(input_dim, hidden_layers[0])
+            self.hidden_layers = torch.nn.Sequential()
+            for i in range(len(hidden_layers) - 1):
+                self.hidden_layers.append(torch.nn.Linear(hidden_layers[i], hidden_layers[i+1]))
+            self.output_layer = torch.nn.Linear(hidden_layers[-1], output_dim)
+        else:
+            self.output_layer = torch.nn.Linear(input_dim, output_dim)
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        # x = self.fc1(x)
+        if self.h:
+            x = torch.relu(self.input_layer(x))
+            for layer in self.hidden_layers:
+                x = torch.relu(layer(x))
+        x = self.output_layer(x)
         return x
 
     def training_step(self, batch, batch_idx):

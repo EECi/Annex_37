@@ -2,19 +2,28 @@ import os
 import numpy as np
 from torch.utils.data import DataLoader
 from pat_utils import Model, Data
-from train import L, T
+from train import building, dataset_type, L, T, hidden_layers
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
-expt_dir = os.path.join('logs', 'building_5', 'version_11', 'checkpoints')
+
+# L = 96      # window length
+# T = 24      # future time-steps
+# building = 5
+dataset_type = 'carbon'
+version = 0
+
+h_str = str(hidden_layers).replace('[', '').replace(']', '').replace(', ', '_')
+expt_name = f'b{building}{dataset_type}_L{L}_T{T}_h{h_str}'
+expt_dir = os.path.join('logs', expt_name, f'version_{version}', 'checkpoints')
 checkpoint_name = os.listdir(expt_dir)[0]
 load_path = os.path.join(expt_dir, checkpoint_name)
 
-test_dataset = Data(building_index=5, L=L, T=T, version='test')
+test_dataset = Data(building_index=building, L=L, T=T, version='test', dataset_type=dataset_type)
 test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-model = Model(L, T)
-model = model.load_from_checkpoint(load_path, input_dim=L, output_dim=T)
+model = Model(L, T, hidden_layers)
+model = model.load_from_checkpoint(load_path, input_dim=L, output_dim=T, hidden_layers=hidden_layers)
 model.eval()
 
 pred_list = []
@@ -49,6 +58,7 @@ line_gt = [gt]
 
 slider_ax = plt.axes([0.1, 0.1, 0.8, 0.05])
 slider = Slider(slider_ax, 'Index', 0, len(x)-window_size, valinit=start_index, valstep=1)
+
 
 def update(val):
     start_index = int(val)
