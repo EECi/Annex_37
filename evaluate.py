@@ -36,7 +36,6 @@ def evaluate(schema_path, tau, **kwargs):
 
     predictor = Predictor(len(lp.b_inds), tau)
 
-
     # Initialise control loop.
     forecast_time_elapsed = 0
     lp_solver_time_elapsed = 0
@@ -63,8 +62,8 @@ def evaluate(schema_path, tau, **kwargs):
         lp_start = time.perf_counter()
         lp.set_custom_time_data(*forecasts, current_socs=current_socs)
         lp.set_LP_parameters()
-        _,_,_,_,alpha_star = lp.solve_LP()
-        actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
+        _, _, _, _, alpha_star = lp.solve_LP()
+        actions: np.array = alpha_star[:, 0].reshape(len(lp.b_inds), 1)
         lp_solver_time_elapsed += time.perf_counter() - lp_start
 
         # ====================================================================
@@ -77,14 +76,14 @@ def evaluate(schema_path, tau, **kwargs):
 
         # Update battery states-of-charge
         # ====================================================================
-        current_socs = np.array(observations)[:,22]
+        current_socs = np.array(observations)[:, 22]
 
         num_steps += 1
 
     print("Evaluation complete.")
 
 
-    metrics = env.evaluate()  # Provides a break down of other metrics that might be of interest.
+    metrics = env.evaluate()    # Provides a break down of other metrics that might be of interest.
     if np.any(np.isnan(metrics['value'])):
         raise ValueError("Some of the metrics returned are NaN, please contact organizers.")
 
@@ -100,16 +99,14 @@ def evaluate(schema_path, tau, **kwargs):
     # ========================================================================
 
 
-
 if __name__ == '__main__':
     import warnings
 
-    tau = 12 # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('example','test') # dataset directory
+    tau = 12    # model prediction horizon (number of timesteps of data predicted)
+    dataset_dir = os.path.join('example', 'test')   # dataset directory
 
-    schema_path = os.path.join('data',dataset_dir,'schema.json')
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
     with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore',module=r'cvxpy')
-
+        warnings.filterwarnings(action='ignore', module=r'cvxpy')
         evaluate(schema_path, tau)

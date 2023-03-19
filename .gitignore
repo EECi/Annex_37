@@ -15,3 +15,7 @@ venv/
 
 # Mac OS files
 *.DS_STORE
+
+# lightning
+*.ckpt
+/logs
