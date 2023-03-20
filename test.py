@@ -1,29 +1,38 @@
 import os
 import numpy as np
 from torch.utils.data import DataLoader
-from pat_utils import Model, Data
-from train import building, dataset_type, L, T, hidden_layers
+from pat_utils import Data, model_finder, get_expt_name
+from train import config, mparam
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 
-# L = 96      # window length
-# T = 24      # future time-steps
-# building = 5
-dataset_type = 'carbon'
-version = 0
+# mparam['L'] = 144
+# mparam['T'] = 24
+# mparam['layers'] = []
 
-h_str = str(hidden_layers).replace('[', '').replace(']', '').replace(', ', '_')
-expt_name = f'b{building}{dataset_type}_L{L}_T{T}_h{h_str}'
+# mparam['mean'] = True
+# mparam['std'] = True
+
+# config['b'] = 5
+# config['dataset_type'] = 'solar'
+# config['model'] = 'vanilla'
+
+version = 0
+save_result = False
+filename = 'results.csv'
+
+expt_name = get_expt_name(config, mparam)
 expt_dir = os.path.join('logs', expt_name, f'version_{version}', 'checkpoints')
 checkpoint_name = os.listdir(expt_dir)[0]
 load_path = os.path.join(expt_dir, checkpoint_name)
 
-test_dataset = Data(building_index=building, L=L, T=T, version='test', dataset_type=dataset_type)
+test_dataset = Data(building_index=config['b'], L=mparam['L'], T=mparam['T'], version='test',
+                    dataset_type=config['dataset_type'])
 test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-model = Model(L, T, hidden_layers)
-model = model.load_from_checkpoint(load_path, input_dim=L, output_dim=T, hidden_layers=hidden_layers)
+model = model_finder(config, mparam)
+model = model.load_from_checkpoint(load_path, **mparam)
 model.eval()
 
 pred_list = []
@@ -47,7 +56,7 @@ end_index = start_index + window_size
 
 fig, ax = plt.subplots(figsize=[15, 5])
 plt.subplots_adjust(left=0.1, bottom=0.25)
-alpha_list = np.linspace(0, 1, pred.shape[1])
+alpha_list = np.linspace(1, 0, pred.shape[1])
 lines = []
 for i in range(pred.shape[1]):
     l, = ax.plot(time_idx[0:window_size] + 1 + i, pred[0:window_size, i],
@@ -76,6 +85,7 @@ def update(val):
 
     line_gt[0].set_xdata(time_idx[start_index:end_index])
     line_gt[0].set_ydata(x[start_index:end_index])
+
     min_test, max_test = np.min(x[start_index:end_index]), np.max(x[start_index:end_index])
     if min_test < min_y:
         min_y = min_test
@@ -94,3 +104,12 @@ plt.show()
 
 mse = np.mean(loss)
 print(f'mse = {mse}')
+
+if save_result:
+    if not os.path.isfile(filename):
+        with open('result.csv', 'w') as f:
+            f.write('mse\n')
+    else:
+        with open('result.csv', 'a') as f:
+            f.write(f'{mse}\n')
+
