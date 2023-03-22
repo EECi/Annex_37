@@ -59,13 +59,16 @@ def evaluate(schema_path, tau, **kwargs):
         forecasts = predictor.compute_forecast(observations)
         forecast_time_elapsed += time.perf_counter() - forecast_start
 
-        # setup and solve predictive Linear Program model of system
-        lp_start = time.perf_counter()
-        lp.set_custom_time_data(*forecasts, current_socs=current_socs)
-        lp.set_LP_parameters()
-        _,_,_,_,alpha_star = lp.solve_LP()
-        actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
-        lp_solver_time_elapsed += time.perf_counter() - lp_start
+        if forecasts is None: # forecastor opt out
+            actions = np.zeros((len(lp.b_inds),1))
+        else:
+            # setup and solve predictive Linear Program model of system
+            lp_start = time.perf_counter()
+            lp.set_custom_time_data(*forecasts, current_socs=current_socs)
+            lp.set_LP_parameters()
+            _,_,_,_,alpha_star = lp.solve_LP()
+            actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
+            lp_solver_time_elapsed += time.perf_counter() - lp_start
 
         # ====================================================================
         # insert your logging code here
