@@ -6,20 +6,30 @@ from lightning.pytorch.accelerators import find_usable_cuda_devices
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.tuner.tuning import Tuner
+# from lightning.pytorch.callbacks.progress import TQDMProgressBar
+
+# class CustomProgressBar(TQDMProgressBar):
+#     def get_metrics(self, *args, **kwargs):
+#         # don't show the version number
+#         items = super().get_metrics(args[0], args[1])
+#         items.pop("v_num", None)
+#         items['hellow'] = 'world'
+#         return items
+
 torch.set_float32_matmul_precision('medium')
 
 config = {
           'b': 5,   # building index
-          'dataset_type': 'solar',
+          'dataset_type': 'price',
           'model': 'vanilla'}
 mparam = {
     'L': 144,       # input window          # generally improves performance with increasing L
-    'T': 256,       # future time-steps      # todo: experiment with this    was at 24
-    'layers': [144*2],  # layers for MLP
+    'T': 48,       # future time-steps
+    'layers': [],  # layers for MLP
     # 'mean': False,   # normalise model
     # 'std': False     # normalise model
     }
-log_dir = 'logs256'
+log_dir = 'logtesting'
 
 if __name__ == '__main__':
     expt_name = get_expt_name(config, mparam)
@@ -30,16 +40,18 @@ if __name__ == '__main__':
                        dataset_type=config['dataset_type'])
     val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-6, patience=15, verbose=False, mode="min")
+    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-6, patience=25, verbose=False, mode="min")
     checkpoint_callback = ModelCheckpoint(monitor="val_loss", mode="min")
 
     model = model_finder(config, mparam)
     logger = TensorBoardLogger(f'{log_dir}/', name=expt_name)
+
     trainer = Trainer(max_epochs=200, logger=logger, accelerator="cuda", devices=find_usable_cuda_devices(1),
                       log_every_n_steps=10,
                       callbacks=[
-                          checkpoint_callback   # use either this or early stop callback
-                          # early_stop_callback # use either this or checkpoint callback
+                          # checkpoint_callback,   # use either this or early stop callback
+                          early_stop_callback, # use either this or checkpoint callback
+                          CustomProgressBar(),
                       ]
                       )
 

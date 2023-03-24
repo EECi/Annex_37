@@ -14,44 +14,173 @@ This class must have the following methods:
 You may wish to implement additional methods to make your model code neater.
 """
 
+
+import os
+import json
+import torch
 import numpy as np
+from torch.utils.data import DataLoader
+from lightning.pytorch import Trainer
+from lightning.pytorch.accelerators import find_usable_cuda_devices
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.callbacks import EarlyStopping
+from lightning.pytorch.tuner.tuning import Tuner
+from utils.pat import model_finder, Data
+from lightning.pytorch.callbacks.progress import TQDMProgressBar
+torch.set_float32_matmul_precision('medium')
 
 
 class Predictor:
-
-    def __init__(self, N: int, tau: int):
+    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=144, T=48, expt_name='linear',
+                 load=False):
         """Initialise Prediction object and perform setup.
         
         Args:
-            N (int): number of buildings in model, hence number of buildings
+            mparam (dict): todo
+            building_indices (typle of int): todo
                 requiring forecasts.
-            tau (int): length of planning horizon (number of time instances
+            T (int): length of planning horizon (number of time instances
                 into the future to forecast).
                 Note: with some adjustment of the codebase variable length
                 planning horizons can be implemented.
+            L (int):    todo
         """
+        if mparam_dict is None:
+            mparam_dict = {'all': {'model_name': 'vanilla',
+                                   'mparam': {'L': L,
+                                              'T': T,
+                                              'layers': []}
+                                   }
+                           }
+        valid_types = ('all', 'solar', 'load', 'carbon', 'price')
+        error_str = f'incorrect keys provided in mparam_dict, only the following is allowed: {valid_types}'
+        assert all([key in valid_types for key in mparam_dict.keys()]), error_str
 
-        self.num_buildings = N
-        self.tau = tau
+        if load:
+            with open(os.path.join(expt_name, 'mparam_dict.json'), 'r') as file:
+                mparam_dict = json.load(file)
+                mparam = next(iter(mparam_dict.values()))['mparam']
+                L = mparam['L']
+                T = mparam['T']
+        else:
+            assert not os.path.exists(expt_name), 'expt_name already taken'
+            os.makedirs(expt_name)
+            with open(os.path.join(expt_name, 'mparam_dict.json'), 'w') as file:
+                json.dump(mparam_dict, file)
 
-        # Load in pre-computed prediction model.
-        # ====================================================================
-        # insert your loading code here
-        # ====================================================================
+        self.mparam_dict = mparam_dict
+        self.building_indices = building_indices
+        self.T = T
+        self.L = L
+        self.expt_name = expt_name
 
-        # Create buffer/tracking attributes
-        self.prev_observations = None
-        self.buffer = {'key': []}
-        # ====================================================================
+        self.training_order = [f'solar_{b}' for b in building_indices]
+        self.training_order += [f'load_{b}' for b in building_indices]
+        self.training_order += ['carbon', 'price']
 
+        self.models = {}
+        if 'all' in mparam_dict.keys():
+            for key in self.training_order:
+                self.models[key] = model_finder(self.mparam_dict['all']['model_name'],
+                                                self.mparam_dict['all']['mparam'])
+        else:
+            for key in self.mparam_dict.keys():
+                self.models[key] = model_finder(self.mparam_dict[key]['model_name'],
+                                                self.mparam_dict[key]['mparam'])
 
-        # dummy forecaster buffer - delete for your implementation
-        # ====================================================================
-        self.prev_vals = {'loads': None, 'pv_gens': None, 'price': None, 'carbon': None}
-        # ====================================================================
+        self.buffer = {}    # todo
 
+    def train(self, patience=25, max_epoch=200):
+        for key in self.training_order:
+            self.train_individual(key, patience, max_epoch)
 
-    def compute_forecast(self, observations):
+    def train_individual(self, key, patience=25, max_epoch=200):
+        # todo
+        # key is of the form 'solar_5'
+
+        if '_' in key:  # deal with solar and load
+            dataset_type, building_index = key.split('_')
+        else:   # deal with carbon and price
+            building_index = self.building_indices[0]
+            dataset_type = key
+
+        # datasets
+        train_dataset = Data(building_index, self.L, self.T, dataset_type, 'train')
+        train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+        val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate')
+        val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+        # early stop
+        early_stop_callback = EarlyStopping(monitor="val_loss",
+                                            min_delta=1e-6,
+                                            patience=patience,
+                                            verbose=False,
+                                            mode="min")
+
+        # status report
+        status = f'{key} ({self.training_order.index(key) + 1} / {len(self.training_order)})'
+
+        class CustomProgressBar(TQDMProgressBar):
+            def get_metrics(self, *args, **kwargs):
+                items = super().get_metrics(args[0], args[1])
+                items.pop("v_num", None)
+                items['current dataset'] = status
+                return items
+
+        # train the model
+        model = self.models[key]
+        logger = TensorBoardLogger(f'{self.expt_name}/', name=key)
+        trainer = Trainer(max_epochs=max_epoch,
+                          logger=logger,
+                          accelerator="cuda",
+                          devices=find_usable_cuda_devices(1),
+                          log_every_n_steps=10,
+                          callbacks=[early_stop_callback, CustomProgressBar()])
+        tuner = Tuner(trainer)
+        lr_finder = tuner.lr_find(model, train_dataloader, val_dataloader, min_lr=1e-6, max_lr=1e-1)
+        lr = lr_finder.suggestion()
+        model.learning_rate = lr
+        trainer.fit(model, train_dataloader, val_dataloader)
+
+    def test_individual(self, building_index=5, dataset_type='solar'):
+        key = dataset_type
+        if dataset_type not in ('price', 'carbon'):
+            key += '_' + str(building_index)
+        expt_dir = os.path.join(self.expt_name, key, f'version_0', 'checkpoints')
+        checkpoint_name = os.listdir(expt_dir)[0]
+        load_path = os.path.join(expt_dir, checkpoint_name)
+
+        test_dataset = Data(building_index=building_index, L=self.L, T=self.T,
+                            version='test', dataset_type=dataset_type)
+        test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+        model = self.models[key]
+        if 'all' in self.mparam_dict.keys():
+            mparam = self.mparam_dict['all']['mparam']
+        else:
+            mparam = self.mparam_dict[key]['mparam']
+        model = model.load_from_checkpoint(load_path, **mparam)
+        model.eval()
+
+        pred_list = []
+        x_list = []
+        loss_list = []
+        for x, y in test_dataloader:
+            x_list.append(x[:, -1])
+            y_hat = model(x)
+            pred_list.append(y_hat.detach().numpy())
+            error = (y[:, 0] - y_hat[:, 0]) ** 2
+            loss_list.append(error.detach().numpy())
+
+        x = np.concatenate(x_list)
+        pred = np.concatenate(pred_list)
+        loss = np.concatenate(loss_list)
+
+        mse = np.mean(loss)
+        print(f'mse = {mse}')
+        return x, pred
+
+    def compute_forecast(self, observations):   # todo: inference, padding with validation set
         """Compute forecasts given current observation.
 
         Args:
@@ -85,7 +214,6 @@ class Predictor:
             'carbon': np.array(observations)[0,19]
         }
 
-
         if self.prev_vals['carbon'] is None:
             predicted_loads = np.repeat(current_vals['loads'].reshape(self.num_buildings,1),self.tau,axis=1)
             predicted_pv_gens = np.repeat(current_vals['pv_gens'].reshape(self.num_buildings,1),self.tau,axis=1)
@@ -112,3 +240,4 @@ class Predictor:
 
 
         return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon
+

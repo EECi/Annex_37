@@ -19,3 +19,4 @@ venv/
 # lightning
 *.ckpt
 log*/
+linear*/
