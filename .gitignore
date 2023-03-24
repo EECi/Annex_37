@@ -18,4 +18,4 @@ venv/
 
 # lightning
 *.ckpt
-/logs
+log*/

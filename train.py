@@ -10,16 +10,16 @@ torch.set_float32_matmul_precision('medium')
 
 config = {
           'b': 5,   # building index
-          'dataset_type': 'price',
+          'dataset_type': 'solar',
           'model': 'vanilla'}
 mparam = {
     'L': 144,       # input window          # generally improves performance with increasing L
-    'T': 24,       # future time-steps      # todo: experiment with this
+    'T': 256,       # future time-steps      # todo: experiment with this    was at 24
     'layers': [144*2],  # layers for MLP
     # 'mean': False,   # normalise model
     # 'std': False     # normalise model
     }
-
+log_dir = 'logs256'
 
 if __name__ == '__main__':
     expt_name = get_expt_name(config, mparam)
@@ -34,8 +34,8 @@ if __name__ == '__main__':
     checkpoint_callback = ModelCheckpoint(monitor="val_loss", mode="min")
 
     model = model_finder(config, mparam)
-    logger = TensorBoardLogger('logs/', name=expt_name)
-    trainer = Trainer(max_epochs=400, logger=logger, accelerator="cuda", devices=find_usable_cuda_devices(1),
+    logger = TensorBoardLogger(f'{log_dir}/', name=expt_name)
+    trainer = Trainer(max_epochs=200, logger=logger, accelerator="cuda", devices=find_usable_cuda_devices(1),
                       log_every_n_steps=10,
                       callbacks=[
                           checkpoint_callback   # use either this or early stop callback

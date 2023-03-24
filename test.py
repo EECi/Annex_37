@@ -2,28 +2,30 @@ import os
 import numpy as np
 from torch.utils.data import DataLoader
 from pat_utils import Data, model_finder, get_expt_name
-from train import config, mparam
+from train import config, mparam, log_dir
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 
-# mparam['L'] = 144
-# mparam['T'] = 24
+mparam['L'] = 144
+mparam['T'] = 24
 # mparam['layers'] = []
 
 # mparam['mean'] = True
 # mparam['std'] = True
 
-# config['b'] = 5
-# config['dataset_type'] = 'solar'
-# config['model'] = 'vanilla'
+config['b'] = 5
+config['dataset_type'] = 'price'
+config['model'] = 'vanilla'
 
 version = 0
+log_dir = 'logs/'
+
 save_result = False
 filename = 'results.csv'
 
 expt_name = get_expt_name(config, mparam)
-expt_dir = os.path.join('logs', expt_name, f'version_{version}', 'checkpoints')
+expt_dir = os.path.join(log_dir, expt_name, f'version_{version}', 'checkpoints')
 checkpoint_name = os.listdir(expt_dir)[0]
 load_path = os.path.join(expt_dir, checkpoint_name)
 
