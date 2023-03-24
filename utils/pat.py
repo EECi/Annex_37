@@ -8,10 +8,8 @@ from torch.utils.data import Dataset
 import lightning.pytorch as pl
 
 
-# todo: docstrings
 def model_finder(model_name, mparam):
-    """
-    Instantiates and returns an instance of the specified model.
+    """Instantiates and returns an instance of the specified model.
 
     Args:
         model_name (str): The name of the model to be created.
@@ -32,7 +30,24 @@ def model_finder(model_name, mparam):
 
 
 class Vanilla(pl.LightningModule):
-    # todo: docstring
+    """A PyTorch Lightning module for a vanilla neural network.
+
+    Args:
+        L (int): Input dimension.
+        T (int): Output dimension.
+        layers (tuple, optional): Tuple of hidden layer sizes. Defaults to (128, 256).
+        learning_rate (float, optional): Learning rate for the optimizer. Defaults to 1e-3.
+
+    Methods:
+        forward(x): Defines the forward pass of the neural network.
+        training_step(batch, batch_idx): Performs a training step on a batch of data.
+        validation_step(batch, batch_idx): Performs a validation step on a batch of data.
+        configure_optimizers(): Configures the optimizer used for training.
+
+    Notes:
+        The neural network is an MLP with the following dimensions: (input, layers[0], layers[1], ..., output).
+    """
+
     def __init__(self, L, T, layers=(128, 256), learning_rate=1e-3):
         super().__init__()
         self.input_dim = L
@@ -75,14 +90,13 @@ class Vanilla(pl.LightningModule):
 
 
 class Data(Dataset):
-    """
-    Represents a dataset for energy consumption (load), solar generation (solar), pricing (price), and carbon intensity
+    """Represents a dataset for energy consumption (load), solar generation (solar), pricing (price), and carbon intensity
     (carbon).
 
     Args:
         building_index (int): The index of the building to use.
         L (int): The length of the input sequence.
-        T (int): The length of the target sequence.
+        T (int): length of planning horizon (number of time instances into the future to forecast).
         dataset_type (str):The type of the dataset to use ('load', 'solar', 'price', or 'carbon').
         version (str): The version of the dataset to use ('train', 'valid' or 'test').
 
@@ -131,8 +145,7 @@ class Data(Dataset):
 
 
 class IndividualPlotter:
-    """
-    A class that creates an interactive plot to visualize the predicted and ground truth values of a time series.
+    """A class that creates an interactive plot to visualize the predicted and ground truth values of a time series.
 
     Args:
         x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t]. Must be 1-dimensional.

@@ -31,20 +31,25 @@ torch.set_float32_matmul_precision('medium')
 
 
 class Predictor:
-    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=144, T=48, expt_name='linear',
+    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=144, T=48, expt_name='log_expt',
                  load=False):
         """Initialise Prediction object and perform setup.
-        
+
         Args:
-            mparam (dict): todo
-            building_indices (typle of int): todo
-                requiring forecasts.
-            T (int): length of planning horizon (number of time instances
-                into the future to forecast).
-                Note: with some adjustment of the codebase variable length
-                planning horizons can be implemented.
-            L (int):    todo
+            mparam_dict (dict): Dictionary containing hyperparameters for each dataset type.
+                If None, defaults to a vanilla model configuration for all dataset types.
+                The keys of the dictionary must be one of ('all', 'solar', 'load', 'carbon', 'price').
+                The value for each key is another dictionary with the following keys:
+                    - model_name (str): Name of the model class to use.
+                    - mparam (dict): Dictionary of hyperparameters to pass to the model.
+            building_indices (tuple of int): Indices of buildings to get data for.
+            T (int): Length of planning horizon (number of time instances into the future to forecast).
+            L (int): The length of the input sequence.
+            expt_name (str): Name of the experiment. Used to create a directory to save experiment-related files.
+            load (bool): Whether to load hyperparameters from a the directory provided by 'expt_name'. Set True for
+            training and False for testing.
         """
+
         if mparam_dict is None:
             mparam_dict = {'all': {'model_name': 'vanilla',
                                    'mparam': {'L': L,
@@ -91,11 +96,25 @@ class Predictor:
         self.buffer = {}    # todo
 
     def train(self, patience=25, max_epoch=200):
+        """Train all models in the desired order.
+
+        Args:
+            patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
+            max_epoch (int): Maximum number of epochs for which to train each model unless stopped early.
+        """
         for key in self.training_order:
             self.train_individual(key, patience, max_epoch)
 
     def train_individual(self, key, patience=25, max_epoch=200):
-        # todo
+        """Train an individual model.
+
+        Args:
+            key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
+            patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
+            max_epoch (int): Maximum number of epochs for which to train the model.
+
+        Note: price and carbon is shared between the buildings so do not have an integer to specify the building index.
+        """
         # key is of the form 'solar_5'
 
         if '_' in key:  # deal with solar and load
@@ -143,6 +162,30 @@ class Predictor:
         trainer.fit(model, train_dataloader, val_dataloader)
 
     def test_individual(self, building_index=5, dataset_type='solar'):
+        """Test an individual model.
+
+        Args:
+            building_index (int): Index of the building for which to generate forecasts.
+            dataset_type (str): Type of dataset to use for prediction. Must be one of
+            ('solar', 'load', 'carbon', 'price').
+
+        Returns:
+            x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t].
+            pred (ndarray): The predicted time series values. At time step 't', pred[t][i] gives the prediction for
+            x[t + 1 + i].
+
+        Example:
+                building_index = 5
+                dataset_type = 'price'
+                expt_name = 'log_linear_L144_T48'
+                predictor = Predictor(expt_name=expt_name, load=True)
+                x, pred = predictor.test_individual(building_index, dataset_type)
+
+        Notes:
+              For testing, load must be set to True on Predictor instantiation. This will load the saved model given by
+              the expt_name directory.
+
+        """
         key = dataset_type
         if dataset_type not in ('price', 'carbon'):
             key += '_' + str(building_index)
