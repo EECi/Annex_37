@@ -43,7 +43,7 @@ def evaluate(schema_path, tau, **kwargs):
     done = False
 
     observations = env.reset()
-    current_socs = np.array(observations)[:,22] # get initial SoCs
+    current_socs = np.array(observations)[:, 22] # get initial SoCs
 
     # Execute control loop.
     while not done:

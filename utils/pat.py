@@ -224,3 +224,81 @@ class IndividualPlotter:
 
     def show(self):
         plt.show()
+
+
+class IndividualInference:
+    """A class that creates an interactive plot to visualize the predicted and ground truth values of a time series.
+
+    Args:
+        x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t]. Must be 1-dimensional.
+        pred (ndarray): The predicted time series values. At time step 't', pred[t][i] gives the prediction for x[t + 1 + i].  Must
+            be 2-dimensional.
+        window_size (int): The number of time steps to show in the plot at a time. Default is 500.
+
+    Example:
+        building_index = 5
+        dataset_type = 'price'
+        expt_name = 'linear_L144_T48'
+        predictor = Predictor(expt_name=expt_name, load=True)
+        x, pred = predictor.test_individual(building_index, dataset_type)
+        plotter = IndividualPlotter(x, pred, window_size=500)
+        plotter.show()
+
+    Notes:
+        The plot is interactive and allows the user to control the current window in the time series using a slider
+        widget.
+    """
+
+    def __init__(self, pred, gt, gt_t, pred_t):
+        self.fig, self.ax = plt.subplots(figsize=[15, 5])
+        plt.subplots_adjust(left=0.1, bottom=0.25)
+
+        self.i = 0
+        self.l_gt, = self.ax.plot(gt_t[self.i], gt[self.i], color='red')
+        self.line_gt = [self.l_gt]
+        self.l_pred, = self.ax.plot(pred_t[self.i], pred[self.i], color='blue')
+        self.line_pred = [self.l_pred]
+
+        self.l_v = self.ax.vlines(pred_t[self.i][0] - 1, self.ax.get_ylim()[0], self.ax.get_ylim()[1],
+                                  colors='grey', linestyles='--', linewidth=1)
+        self.line_v = [self.l_v]
+
+        self.slider_ax = plt.axes([0.1, 0.1, 0.8, 0.05])
+        self.slider = Slider(self.slider_ax, 'Index', 0, len(gt_t) - 1, valinit=0, valstep=1)
+
+        self.gt_t = gt_t
+        self.gt = gt
+        self.pred_t = pred_t
+        self.pred = pred
+
+        self.slider.on_changed(self.update)
+
+    def update(self, val):
+        self.i = int(val)
+
+        self.line_gt[0].set_xdata(self.gt_t[self.i])
+        self.line_gt[0].set_ydata(self.gt[self.i])
+
+        self.line_pred[0].set_xdata(self.pred_t[self.i])
+        self.line_pred[0].set_ydata(self.pred[self.i])
+
+        min_y, max_y = np.min(self.gt[self.i]), np.max(self.gt[self.i])
+        min_test, max_test = np.min(self.pred[self.i]), np.max(self.pred[self.i])
+        if min_test < min_y:
+            min_y = min_test
+        if max_test > max_y:
+            max_y = max_test
+
+        xlim_offset = len(self.gt_t[self.i]) * 0.05
+        self.ax.set_xlim([self.gt_t[self.i][0] - xlim_offset, self.gt_t[self.i][-1] + xlim_offset])
+
+        ylim_offset = (max_y - min_y) * 0.05
+        self.ax.set_ylim([min_y - ylim_offset, max_y + ylim_offset])
+
+        self.line_v[0].remove()
+        self.line_v[0] = self.ax.vlines(self.pred_t[self.i][0] - 1, self.ax.get_ylim()[0], self.ax.get_ylim()[1],
+                                        colors='grey', linestyles='--', linewidth=1)
+        self.fig.canvas.draw_idle()
+
+    def show(self):
+        plt.show()

@@ -1,3 +1,5 @@
+import os
+import glob
 from predictor import Predictor
 
 
@@ -11,3 +13,8 @@ mparam_dict = {'all': {'model_name': 'vanilla',
 building_indices = (5, 11, 14, 16, 24, 29)
 predictor = Predictor(mparam_dict, building_indices, L, T, expt_name)
 predictor.train(patience=25, max_epoch=500)
+
+# clear learning rate checkpoints from current directory
+lr_checkpoint_list = glob.glob('.lr_find*')
+for lr_checkpoint in lr_checkpoint_list:
+    os.remove(lr_checkpoint)

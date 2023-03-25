@@ -20,6 +20,7 @@ import csv
 import json
 import torch
 import numpy as np
+from collections import deque
 from torch.utils.data import DataLoader
 from lightning.pytorch import Trainer
 from lightning.pytorch.accelerators import find_usable_cuda_devices
@@ -96,7 +97,29 @@ class Predictor:
                 self.models[key] = model_finder(self.mparam_dict[key]['model_name'],
                                                 self.mparam_dict[key]['mparam'])
 
-        self.buffer = {}    # todo
+        if load:
+            self.buffer = {}        # todo: check
+            for key in self.training_order:
+                # fill up buffer using validation set
+                if '_' in key:  # deal with solar and load
+                    dataset_type, building_index = key.split('_')
+                else:  # deal with carbon and price
+                    building_index = self.building_indices[0]
+                    dataset_type = key
+                val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate')
+                x, _ = val_dataset[-1]
+                self.buffer[key] = deque(x, maxlen=len(x))
+
+                if 'all' in mparam_dict.keys():
+                    mparam = self.mparam_dict['all']['mparam']
+                else:
+                    mparam = self.mparam_dict[dataset_type]['mparam']
+
+                expt_dir = os.path.join('logs', self.expt_name, key, f'version_0', 'checkpoints')
+                checkpoint_name = os.listdir(expt_dir)[0]
+                load_path = os.path.join(expt_dir, checkpoint_name)
+                self.models[key] = self.models[key].load_from_checkpoint(load_path, **mparam)
+                self.models[key].eval()
 
     def train(self, patience=25, max_epoch=200):
         """Train all models.
@@ -167,7 +190,7 @@ class Predictor:
 
         # train the model
         model = self.models[key]
-        logger = TensorBoardLogger(f'{os.path.join("logs", self.expt_name)}/', name=key)
+        logger = TensorBoardLogger(f'{os.path.join("logs", self.expt_name)}', name=key)
         trainer = Trainer(max_epochs=max_epoch,
                           logger=logger,
                           accelerator="cuda",
@@ -206,7 +229,7 @@ class Predictor:
         for key in self.training_order:
             status = f'{key} ({self.training_order.index(key) + 1} / {len(self.training_order)})'
             print(f'testing: {status}')
-            _, _, mse, = self.test_individual(key=key)
+            _, _, _, _, _, mse = self.test_individual(key=key)
             results.append(mse)
             print(f'mse = {mse:.4g}\n')
 
@@ -234,7 +257,7 @@ class Predictor:
                 dataset_type = 'price'
                 expt_name = 'log_linear_L144_T48'
                 predictor = Predictor(expt_name=expt_name, load=True)
-                x, pred, mse = predictor.test_individual(building_index, dataset_type)
+                x, pred, _, _, _, mse = predictor.test_individual(building_index, dataset_type)
                 print(f'mse = {mse}')
 
         Notes:
@@ -261,38 +284,39 @@ class Predictor:
                 building_index = self.building_indices[0]
                 dataset_type = key
 
-        expt_dir = os.path.join('logs', self.expt_name, key, f'version_0', 'checkpoints')
-        checkpoint_name = os.listdir(expt_dir)[0]
-        load_path = os.path.join(expt_dir, checkpoint_name)
-
         test_dataset = Data(building_index=building_index, L=self.L, T=self.T,
                             version='test', dataset_type=dataset_type)
         test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
         model = self.models[key]
-        if 'all' in self.mparam_dict.keys():
-            mparam = self.mparam_dict['all']['mparam']
-        else:
-            mparam = self.mparam_dict[key]['mparam']
-        model = model.load_from_checkpoint(load_path, **mparam)
-        model.eval()
 
-        pred_list = []
         x_list = []
         loss_list = []
-        for x, y in test_dataloader:
+        pred_list = []
+        gt_list = []
+        gt_t_list = []
+        pred_t_list = []
+        for t, (x, y) in enumerate(test_dataloader):
             x_list.append(x[:, -1])
             y_hat = model(x)
             pred_list.append(y_hat.detach().numpy())
             error = (y[:, 0] - y_hat[:, 0]) ** 2
             loss_list.append(error.detach().numpy())
+            gt = np.concatenate([x, y], axis=1)
+            gt_list.append(gt)
+            gt_t_list.append(np.arange(t, t + gt.shape[1]))
+            pred_t_list.append(np.arange(t + x.shape[1], t + x.shape[1] + y.shape[1]))
 
+        gt = np.concatenate(gt_list)
+        gt_t = np.array(gt_t_list)
+        pred_t = np.array(pred_t_list)
         x = np.concatenate(x_list)
         pred = np.concatenate(pred_list)
         mse = np.mean(np.concatenate(loss_list))
-        return x, pred, mse
+        return x, pred, gt, gt_t, pred_t, mse
 
-    def compute_forecast(self, observations):   # todo: inference, padding with validation set
+
+    def compute_forecast(self, observations):
         """Compute forecasts given current observation.
 
         Args:
@@ -312,44 +336,24 @@ class Predictor:
                 period of the planning horizon (kgCO2/kWh) - shape (tau)
         """
 
-        # ====================================================================
-        # insert your forecasting code here
-        # ====================================================================
-
-
-        # dummy forecaster for illustration - delete for your implementation
-        # ====================================================================
-        current_vals = {
-            'loads': np.array(observations)[:,20],
-            'pv_gens': np.array(observations)[:,21],
-            'pricing': np.array(observations)[0,24],
-            'carbon': np.array(observations)[0,19]
+        current_obs = {
+            'loads': np.array(observations)[:, 20],
+            'pv_gens': np.array(observations)[:, 21],
+            'pricing': np.array(observations)[0, 24],
+            'carbon': np.array(observations)[0, 19]
         }
 
-        if self.prev_vals['carbon'] is None:
-            predicted_loads = np.repeat(current_vals['loads'].reshape(self.num_buildings,1),self.tau,axis=1)
-            predicted_pv_gens = np.repeat(current_vals['pv_gens'].reshape(self.num_buildings,1),self.tau,axis=1)
-            predicted_pricing = np.repeat(current_vals['pricing'], self.tau)
-            predicted_carbon = np.repeat(current_vals['carbon'], self.tau)
+        out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
+        for key in self.training_order:
+            if '_' in key:  # deal with solar and load
+                dataset_type, building_index = key.split('_')
+            else:  # deal with carbon and price
+                building_index = self.building_indices[0]
+                dataset_type = key
+            self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(building_index)])
 
-        else:
-            predict_inds = [t+1 for t in range(self.tau)]
+            x = torch.tensor(self.buffer[key])
+            out[dataset_type].append(self.models[key](x))    # probably need to do to device
 
-            # note, pricing & carbon predictions of all zeros can lead to issues, so clip to 0.01
-            load_lines = [np.poly1d(np.polyfit([-1,0],[self.prev_vals['loads'][b],current_vals['loads'][b]],deg=1)) for b in range(self.num_buildings)]
-            predicted_loads = np.array([line(predict_inds) for line in load_lines]).clip(0.01)
-
-            pv_gen_lines = [np.poly1d(np.polyfit([-1,0],[self.prev_vals['pv_gens'][b],current_vals['pv_gens'][b]],deg=1)) for b in range(self.num_buildings)]
-            predicted_pv_gens = np.array([line(predict_inds) for line in pv_gen_lines]).clip(0)
-
-            predicted_pricing = np.poly1d(np.polyfit([-1,0],[self.prev_vals['pricing'],current_vals['pricing']],deg=1))(predict_inds).clip(0.01)
-
-            predicted_carbon = np.poly1d(np.polyfit([-1,0],[self.prev_vals['carbon'],current_vals['carbon']],deg=1))(predict_inds).clip(0.01)
-
-
-        self.prev_vals = current_vals
-        # ====================================================================
-
-
-        return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon
+        return out['load'], out['solar'], out['price'], out['carbon']
 
