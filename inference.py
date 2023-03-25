@@ -19,7 +19,7 @@ config['dataset_type'] = 'carbon'
 config['model'] = 'vanilla'
 
 version = 0
-log_dir = 'logs/'
+log_dir = 'archive/logs/'
 
 save_result = False
 filename = 'results.csv'
