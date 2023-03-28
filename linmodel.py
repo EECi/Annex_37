@@ -75,7 +75,7 @@ class LinProgModel():
             tau (int, optional): number of time instances included in LP model. Defaults to None.
             t_start (int, optional): starting time index for LP model. Defaults to None.
             current_socs (np.array, optional): initial states of charge of batteries in
-                period before t_start. Defaults to None.
+                period before t_start (kWh). Defaults to None.
         """
         # useful for investigating how the time horizon of perfect information MPC affects performance
         # (compare to full information global LP performance) - in some ways this is VoI-ish as it
@@ -128,7 +128,7 @@ class LinProgModel():
             prices (np.array): grid electricity price in each period ($/kWh) - shape (tau)
             carbon_intensities (np.array): grid electricity carbon intensity in each period (kgCO2/kWh) - shape (tau)
             current_socs (np.array, optional): initial states of charge of batteries in
-                period before t_start. Defaults to None.
+                period before t_start (kWh). Defaults to None.
         """
 
         if not hasattr(self,'buildings'): raise NameError("Battery data must be contructed before providing time data.")
@@ -291,7 +291,7 @@ class LinProgModel():
 
         if 'solver' not in kwargs: kwargs['solver'] = 'SCIPY'
         if 'verbose' not in kwargs: kwargs['verbose'] = False
-        if kwargs['solver'] == 'SCIPY': kwargs['scipy_options'] = {'method':'highs'}
+        if kwargs['solver'] == 'SCIPY': kwargs['scipy_options'] = {'method':'highs-ipm'}
         if kwargs['verbose'] == True: kwargs['scipy_options'].update({'disp':True})
 
         try:

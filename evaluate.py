@@ -44,7 +44,7 @@ def evaluate(schema_path, tau, **kwargs):
     done = False
 
     observations = env.reset()
-    current_socs = np.array(observations)[:,22] # get initial SoCs
+    current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,22],lp.battery_capacities)]) # get initial SoCs
 
     # Execute control loop.
     while not done:
@@ -80,7 +80,7 @@ def evaluate(schema_path, tau, **kwargs):
 
         # Update battery states-of-charge
         # ====================================================================
-        current_socs = np.array(observations)[:,22]
+        current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,22],lp.battery_capacities)])
 
         num_steps += 1
 
