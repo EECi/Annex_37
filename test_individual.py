@@ -1,5 +1,5 @@
 from predictor import Predictor
-from utils.pat import IndividualPlotter
+from utils.dms import IndividualPlotter
 
 
 building_index = 5

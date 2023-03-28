@@ -1,5 +1,5 @@
 from predictor import Predictor
-from utils.pat import IndividualInference
+from utils.dms import IndividualInference
 
 
 building_index = 5

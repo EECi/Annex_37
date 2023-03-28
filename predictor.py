@@ -27,7 +27,7 @@ from lightning.pytorch.accelerators import find_usable_cuda_devices
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.tuner.tuning import Tuner
-from utils.pat import model_finder, Data
+from utils.dms import model_finder, Data
 from lightning.pytorch.callbacks.progress import TQDMProgressBar
 torch.set_float32_matmul_precision('medium')
 
@@ -83,9 +83,8 @@ class Predictor:
         self.expt_name = expt_name
         self.results_file = os.path.join('logs', results_file)
 
-        self.training_order = [f'solar_{b}' for b in building_indices]
-        self.training_order += [f'load_{b}' for b in building_indices]
-        self.training_order += ['carbon', 'price']
+        self.training_order = [f'load_{b}' for b in building_indices]
+        self.training_order += ['solar', 'carbon', 'price']
 
         self.models = {}
         if 'all' in mparam_dict.keys():
@@ -101,11 +100,7 @@ class Predictor:
             self.buffer = {}
             for key in self.training_order:
                 # fill up buffer using validation set
-                if '_' in key:  # deal with solar and load
-                    dataset_type, building_index = key.split('_')
-                else:  # deal with carbon and price
-                    building_index = self.building_indices[0]
-                    dataset_type = key
+                building_index, dataset_type = self.key2bd(key)
                 val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate')
                 x, _ = val_dataset[-1]
                 self.buffer[key] = deque(x, maxlen=len(x))
@@ -138,7 +133,7 @@ class Predictor:
             building_index (int): Index of the building for which to generate forecasts.
             dataset_type (str): Type of dataset to use for prediction. Must be one of
                 ('solar', 'load', 'carbon', 'price').
-            key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
+            key (str): Represents the dataset type and building index (e.g. 'solar', 'load_5, 'price', 'carbon').
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train the model.
 
@@ -155,15 +150,9 @@ class Predictor:
         assert bd or key is not None, 'either specify both building_index and dataset_type, or key'
 
         if key is None:
-            key = dataset_type
-            if dataset_type not in ('price', 'carbon'):
-                key += '_' + str(building_index)
+            key = self.bd2key(building_index, dataset_type)
         else:
-            if '_' in key:  # deal with solar and load
-                dataset_type, building_index = key.split('_')
-            else:  # deal with carbon and price
-                building_index = self.building_indices[0]
-                dataset_type = key
+            building_index, dataset_type = self.key2bd(key)
 
         # datasets
         train_dataset = Data(building_index, self.L, self.T, dataset_type, 'train')
@@ -245,7 +234,7 @@ class Predictor:
             building_index (int): Index of the building for which to generate forecasts.
             dataset_type (str): Type of dataset to use for prediction. Must be one of
             ('solar', 'load', 'carbon', 'price').
-            key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
+            key (str): Represents the dataset type and building index (e.g. 'solar', 'load_5, 'price', 'carbon').
 
         Returns:
             x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t].
@@ -274,15 +263,9 @@ class Predictor:
         assert bd or key is not None, 'either specify both building_index and dataset_type, or key'
 
         if key is None:
-            key = dataset_type
-            if dataset_type not in ('price', 'carbon'):
-                key += '_' + str(building_index)
+            key = self.bd2key(building_index, dataset_type)
         else:
-            if '_' in key:  # deal with solar and load
-                dataset_type, building_index = key.split('_')
-            else:  # deal with carbon and price
-                building_index = self.building_indices[0]
-                dataset_type = key
+            building_index, dataset_type = self.key2bd(key)
 
         test_dataset = Data(building_index=building_index, L=self.L, T=self.T,
                             version='test', dataset_type=dataset_type)
@@ -315,6 +298,44 @@ class Predictor:
         mse = np.mean(np.concatenate(loss_list))
         return x, pred, gt, gt_t, pred_t, mse
 
+    def key2bd(self, key):
+        """Extracts the building index and dataset type from a given key.
+
+        Args:
+            key (str): A string containing the dataset type and building index, separated by an underscore.
+                Example: 'load_5', 'load_11', 'carbon', 'price', 'solar'.
+
+        Returns:
+            Tuple[int, str]: A tuple containing the building index (int) and dataset type (str).
+                Example: ('load', 5), ('load', 11), ('carbon', 5), ('solar', 5)
+
+        Notes:
+            'carbon', 'price' and 'solar is shared between the buildings so will return the same building index.
+        """
+        if '_' in key:  # load
+            dataset_type, building_index = key.split('_')
+        else:  # solar, carbon and price
+            building_index = self.building_indices[0]
+            dataset_type = key
+        return building_index, dataset_type
+
+    def bd2key(self, building_index, dataset_type):
+        """Constructs a key string from a given building index and dataset type.
+
+        Args:
+            building_index (int): An integer representing the index of the building.
+            dataset_type (str): A string representing the type of dataset. It can be one of the following:
+                'solar', 'load', 'price', or 'carbon'.
+
+        Returns:
+            str: A string representing the key, in the format "<dataset_type>_<building_index>" (load)
+                or "<dataset_type>" ('solar', 'carbon', 'price).
+        """
+        key = dataset_type
+        if dataset_type not in ('solar', 'price', 'carbon'):
+            key += '_' + str(building_index)
+        return key
+
     def compute_forecast(self, observations):
         """Compute forecasts given current observation.
 
@@ -344,11 +365,7 @@ class Predictor:
 
         out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
         for key in self.training_order:
-            if '_' in key:  # deal with solar and load
-                dataset_type, building_index = key.split('_')
-            else:  # deal with carbon and price
-                building_index = self.building_indices[0]
-                dataset_type = key
+            building_index, dataset_type = self.key2bd(key)
             self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
             x = torch.tensor(self.buffer[key], dtype=torch.float32)
