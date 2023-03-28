@@ -16,7 +16,8 @@ venv/
 # Mac OS files
 *.DS_STORE
 
-# lightning
+# lightning and experiments
 *.ckpt
 log*/
 linear*/
+*.csv

@@ -98,7 +98,7 @@ class Predictor:
                                                 self.mparam_dict[key]['mparam'])
 
         if load:
-            self.buffer = {}        # todo: check
+            self.buffer = {}
             for key in self.training_order:
                 # fill up buffer using validation set
                 if '_' in key:  # deal with solar and load
@@ -315,7 +315,6 @@ class Predictor:
         mse = np.mean(np.concatenate(loss_list))
         return x, pred, gt, gt_t, pred_t, mse
 
-
     def compute_forecast(self, observations):
         """Compute forecasts given current observation.
 
@@ -327,9 +326,9 @@ class Predictor:
 
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
-                period of the planning horizon (kWh) - shape (N,tau)
+                period of the planning horizon (kWh) - shape (N, tau)
             predicted_pv_gens (np.array): predicted energy generations of pv panels in each
-                period of the planning horizon (kWh) - shape (N,tau)
+                period of the planning horizon (kWh) - shape (N, tau)
             predicted_pricing (np.array): predicted grid electricity price in each period
                 of the planning horizon ($/kWh) - shape (tau)
             predicted_carbon (np.array): predicted grid electricity carbon intensity in each
@@ -337,10 +336,10 @@ class Predictor:
         """
 
         current_obs = {
-            'loads': np.array(observations)[:, 20],
-            'pv_gens': np.array(observations)[:, 21],
-            'pricing': np.array(observations)[0, 24],
-            'carbon': np.array(observations)[0, 19]
+            'solar': np.array(observations)[:, 21],
+            'load': np.array(observations)[:, 20],
+            'carbon': np.array(observations)[0, 19].reshape(1),
+            'price': np.array(observations)[0, 24].reshape(1)
         }
 
         out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
@@ -350,10 +349,14 @@ class Predictor:
             else:  # deal with carbon and price
                 building_index = self.building_indices[0]
                 dataset_type = key
-            self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(building_index)])
+            self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
-            x = torch.tensor(self.buffer[key])
-            out[dataset_type].append(self.models[key](x))    # probably need to do to device
+            x = torch.tensor(self.buffer[key], dtype=torch.float32)
+            out[dataset_type].append(self.models[key](x).detach().numpy())
 
-        return out['load'], out['solar'], out['price'], out['carbon']
+        load = np.array(out['load'])
+        solar = np.array(out['solar'])
+        price = np.array(out['price']).reshape(-1)
+        carbon = np.array(out['carbon']).reshape(-1)
+        return load, solar, price, carbon
 

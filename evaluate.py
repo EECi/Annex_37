@@ -7,6 +7,7 @@ with specified dataset to evaluate predictor performance.
 """
 
 import os
+import csv
 import time
 import numpy as np
 import cvxpy as cp
@@ -33,8 +34,9 @@ def evaluate(schema_path, tau, **kwargs):
     # ========================================================================
     # insert your import & setup code for your predictor here.
     # ========================================================================
-
-    predictor = Predictor(len(lp.b_inds), tau)
+    t_start = time.time()                           # todo: remove
+    predictor = Predictor(expt_name=kwargs['expt_name'], load=True)
+    print(f'load time = {time.time()-t_start}')     # todo: remove
 
     # Initialise control loop.
     forecast_time_elapsed = 0
@@ -43,7 +45,7 @@ def evaluate(schema_path, tau, **kwargs):
     done = False
 
     observations = env.reset()
-    current_socs = np.array(observations)[:, 22] # get initial SoCs
+    current_socs = np.array(observations)[:, 22]    # get initial SoCs
 
     # Execute control loop.
     while not done:
@@ -66,10 +68,6 @@ def evaluate(schema_path, tau, **kwargs):
         actions: np.array = alpha_star[:, 0].reshape(len(lp.b_inds), 1)
         lp_solver_time_elapsed += time.perf_counter() - lp_start
 
-        # ====================================================================
-        # insert your logging code here
-        # ====================================================================
-
         # Apply action to environment.
         # ====================================================================
         observations, _, done, _ = env.step(actions)
@@ -77,36 +75,50 @@ def evaluate(schema_path, tau, **kwargs):
         # Update battery states-of-charge
         # ====================================================================
         current_socs = np.array(observations)[:, 22]
-
         num_steps += 1
-
     print("Evaluation complete.")
-
 
     metrics = env.evaluate()    # Provides a break down of other metrics that might be of interest.
     if np.any(np.isnan(metrics['value'])):
         raise ValueError("Some of the metrics returned are NaN, please contact organizers.")
 
+    price = metrics.iloc[5].value
+    carbon = metrics.iloc[2].value
+    grid = np.mean([metrics.iloc[0].value, metrics.iloc[6].value])
     print("=========================Results=========================")
-    print(f"Price Cost: {metrics.iloc[5].value}")
-    print(f"Emission Cost: {metrics.iloc[2].value}")
-    print(f"Grid Cost: {np.mean([metrics.iloc[0].value, metrics.iloc[6].value])}")
+    print(f"Price Cost: {price}")
+    print(f"Emission Cost: {carbon}")
+    print(f"Grid Cost: {grid}")
     print(f"Total time taken by Predictor: {forecast_time_elapsed}s")
     print(f"Total time taken by LP solver: {lp_solver_time_elapsed}s")
 
     # ========================================================================
     # insert your logging code here
     # ========================================================================
+    return price, carbon, grid
 
 
 if __name__ == '__main__':
     import warnings
 
-    tau = 12    # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('example', 'test')   # dataset directory
+    L = 168
+    tau = 168
+    expt_name = f'linear_L{L}_T{tau}'
+    evaluate_file = 'evaluate.csv'
 
+    dataset_dir = os.path.join('example', 'test')   # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
+
+    header = ['experiment', 'price', 'carbon', 'grid']
+    if not os.path.exists(evaluate_file):
+        with open(evaluate_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        evaluate(schema_path, tau)
+        price, carbon, grid = evaluate(schema_path, tau, expt_name=expt_name)
+
+    with open(evaluate_file, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([price, carbon, grid])

@@ -3,7 +3,7 @@ from utils.pat import IndividualInference
 
 
 building_index = 5
-dataset_type = 'solar'
+dataset_type = 'load'
 
 expt_name = 'linear_L168_T48'
 predictor = Predictor(expt_name=expt_name, load=True)
