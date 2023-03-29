@@ -27,7 +27,7 @@ def evaluate_ground_truth(
     """Evaluate performance of LinMPC controller using perfect ('ground truth') forecasts.
 
     Args:
-        schema_path (Str or os.Path): path to schema defining simulation data.
+        schema_path (str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         objective_dict (dict, optional): dictionary defining objective contributions
         to use in LinMPC objective. Defaults to {'price':True,'carbon':True,'ramping':True}.
