@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 
-    objective_dict = {'price':True,'carbon':True,'ramping':False}
+    objective_dict = {'price':True,'carbon':True,'ramping':True}
     clip_level = 'b' # aggregation level for objective
 
     tau = 12 # model prediction horizon (number of timesteps of data predicted)
