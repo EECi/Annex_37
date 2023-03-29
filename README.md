@@ -52,6 +52,8 @@ For the analysis, hourly-resolved building electrical load from the Cambridge Un
 
 Initially three example datasets: `train` (2010-2015), `validate` (2016-2017), and `test` (2018-2019); consisting of a set of 6 buildings of similar mean loads are provided.
 
+*Note: the `validate` dataset is a subset of the training data sectioned off to be used for hyper-parameter learning for machine learning methods. However, for classical methods that do not required this, it can be included in the training dataset to extend the available training data.*
+
 <br>
 
 # Using the framework
