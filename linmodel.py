@@ -175,8 +175,10 @@ class LinProgModel():
         if not hasattr(self,'buildings'): raise NameError("Building properties must be set before LP can be generated.")
         if not hasattr(self,'tau'): raise NameError("Planning horizon must be set before LP can be generated.")
 
-        assert True in list(objective_dict.values()), "Objective cannot be empty, `objective_dict` must contain at least one 'True' entry"
+        assert True in list(objective_dict.values()), "Objective cannot be empty, `objective_dict` must contain at least one 'True' entry."
         self.objective_dict = objective_dict
+
+        assert clip_level in ['d','b'], "`clip_level` value must be either 'd' (district) or 'b' (building)."
 
         self.N = len(self.buildings)
         assert self.N > 0
@@ -196,9 +198,18 @@ class LinProgModel():
 
         # compute no storage objective values - for [t+1,t+tau]
         self.e_grids_without = cp.sum(self.elec_loads_param - self.solar_gens_param, axis=0)
-        self.price_without = cp.pos(self.e_grids_without) @ self.prices_param
-        self.carbon_without = cp.pos(self.e_grids_without) @ self.carbon_intensities_param
         self.ramp_without = cp.norm(self.e_grids_without[1:]-self.e_grids_without[:-1],1)
+        if clip_level == 'd':
+            # aggregate costs at district level (CityLearn <= 1.6 objective)
+            # costs are computed from clipped e_grids value - i.e. looking at portfolio elec. cost
+            self.price_without = cp.pos(self.e_grids_without) @ self.prices_param
+            self.carbon_without = cp.pos(self.e_grids_without) @ self.carbon_intensities_param
+        elif clip_level == 'b':
+            # aggregate costs at building level and average (CityLearn >= 1.7 objective)
+            # costs are computed from clipped building power flow values - i.e. looking at mean building elec. cost
+            self.building_power_flows_without = self.elec_loads_param - self.solar_gens_param
+            self.price_without = cp.sum(cp.pos(self.building_power_flows_without), axis=0) @ self.prices_param
+            self.carbon_without = cp.sum(cp.pos(self.building_power_flows_without), axis=0) @ self.carbon_intensities_param
 
 
         # set up constraints
@@ -239,17 +250,37 @@ class LinProgModel():
             cp.multiply(self.alpha,np.tile(self.battery_capacities.reshape(self.N,1),self.tau)),\
                 axis=0) # for [t+1,t+tau]
 
-        if objective_dict['price'] or objective_dict['carbon']:
-            self.xi = cp.Variable(self.tau, nonneg=True)
-            self.constraints += [self.xi >= self.e_grids] # for t \in [t+1,t+tau]
-
         objective_contributions = []
-        if objective_dict['price']:
-            objective_contributions.append((self.xi @ self.prices_param)/cp.maximum(self.price_without,1))
-        if objective_dict['carbon']:
-            objective_contributions.append((self.xi @ self.carbon_intensities_param)/cp.maximum(self.carbon_without,1))
+
+        if objective_dict['price'] or objective_dict['carbon']:
+
+            if clip_level == 'd':
+                # aggregate costs at district level (CityLearn <= 1.6 objective)
+                # costs are computed from clipped e_grids value - i.e. looking at portfolio elec. cost
+                self.xi = cp.Variable(self.tau, nonneg=True)
+                self.constraints += [self.xi >= self.e_grids] # for t \in [t+1,t+tau]
+
+                if objective_dict['price']:
+                    objective_contributions.append((self.xi @ self.prices_param)/cp.maximum(self.price_without,1))
+                if objective_dict['carbon']:
+                    objective_contributions.append((self.xi @ self.carbon_intensities_param)/cp.maximum(self.carbon_without,1))
+
+            elif clip_level == 'b':
+                # aggregate costs at building level and average (CityLearn >= 1.7 objective)
+                # costs are computed from clipped building power flow values - i.e. looking at mean building elec. cost
+                self.bxi = cp.Variable(shape=(self.N,self.tau), nonneg=True) # building level xi
+                self.building_power_flows = self.elec_loads_param - self.solar_gens_param +\
+                    cp.multiply(self.alpha,np.tile(self.battery_capacities.reshape(self.N,1),self.tau))
+                self.constraints += [self.bxi >= self.building_power_flows] # for t \in [t+1,t+tau]
+
+                if objective_dict['price']:
+                    objective_contributions.append((cp.sum(self.bxi, axis=0) @ self.prices_param)/cp.maximum(self.price_without,1))
+                if objective_dict['carbon']:
+                    objective_contributions.append((cp.sum(self.bxi, axis=0) @ self.carbon_intensities_param)/cp.maximum(self.carbon_without,1))
+
         if objective_dict['ramping']:
             objective_contributions.append(cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/cp.maximum(self.ramp_without,1))
+
         objective_contributions = cp.vstack(objective_contributions) # convert to cvxpy array
 
         self.obj = cp.sum(objective_contributions)/objective_contributions.size
