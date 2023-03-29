@@ -182,7 +182,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 3110.0,
-                    "nominal_power": 194.0,
+                    "nominal_power": 388.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
@@ -228,7 +228,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 2750.0,
-                    "nominal_power": 172.0,
+                    "nominal_power": 344.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
@@ -274,7 +274,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 2712.0,
-                    "nominal_power": 170.0,
+                    "nominal_power": 340.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
@@ -320,7 +320,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 2606.0,
-                    "nominal_power": 163.0,
+                    "nominal_power": 326.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
@@ -366,7 +366,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 4750.0,
-                    "nominal_power": 297.0,
+                    "nominal_power": 594.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
@@ -412,7 +412,7 @@
                 "autosize": false,
                 "attributes": {
                     "capacity": 4570.0,
-                    "nominal_power": 286.0,
+                    "nominal_power": 572.0,
                     "capacity_loss_coefficient": 1e-05,
                     "loss_coefficient": 0,
                     "power_efficiency_curve": [
