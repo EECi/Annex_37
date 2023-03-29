@@ -157,7 +157,8 @@ class LinProgModel():
         self.carbon_intensities = carbon_intensities
 
 
-    def generate_LP(self, objective_dict: Dict[str,bool] = {'price':True, 'carbon':True, 'ramping':True}) -> None:
+    def generate_LP(self, objective_dict: Dict[str,bool] = {'price':True, 'carbon':True, 'ramping':True},
+        clip_level: str = 'd') -> None:
         """Set up CVXPY LP of CityLearn model with data specified by schema, for
         desired buildings over specified time period.
 
@@ -167,6 +168,8 @@ class LinProgModel():
         Args:
             objective_dict (Dict[str,bool] ,optional): dictionary indicating whether to use
             objective contributions is overall objective of LP.
+            clip_level (Str, optional): str, either 'd' (district) or 'b' (building), indicating
+            the level at which to clip cost values in the objective function
         """
 
         if not hasattr(self,'buildings'): raise NameError("Building properties must be set before LP can be generated.")
@@ -193,7 +196,7 @@ class LinProgModel():
 
         # compute no storage objective values - for [t+1,t+tau]
         self.e_grids_without = cp.sum(self.elec_loads_param - self.solar_gens_param, axis=0)
-        self.price_without = self.e_grids_without @ self.prices_param
+        self.price_without = cp.pos(self.e_grids_without) @ self.prices_param
         self.carbon_without = cp.pos(self.e_grids_without) @ self.carbon_intensities_param
         self.ramp_without = cp.norm(self.e_grids_without[1:]-self.e_grids_without[:-1],1)
 
@@ -236,13 +239,13 @@ class LinProgModel():
             cp.multiply(self.alpha,np.tile(self.battery_capacities.reshape(self.N,1),self.tau)),\
                 axis=0) # for [t+1,t+tau]
 
-        if objective_dict['carbon']:
+        if objective_dict['price'] or objective_dict['carbon']:
             self.xi = cp.Variable(self.tau, nonneg=True)
             self.constraints += [self.xi >= self.e_grids] # for t \in [t+1,t+tau]
 
         objective_contributions = []
         if objective_dict['price']:
-            objective_contributions.append((self.e_grids @ self.prices_param)/cp.maximum(self.price_without,1))
+            objective_contributions.append((self.xi @ self.prices_param)/cp.maximum(self.price_without,1))
         if objective_dict['carbon']:
             objective_contributions.append((self.xi @ self.carbon_intensities_param)/cp.maximum(self.carbon_without,1))
         if objective_dict['ramping']:
@@ -256,7 +259,7 @@ class LinProgModel():
 
         # construct problem
         self.problem = cp.Problem(self.objective,self.constraints)
-    
+
 
     def set_LP_parameters(self):
         """Set value of CVXPY parameters using loaded data."""
@@ -291,7 +294,7 @@ class LinProgModel():
 
         if 'solver' not in kwargs: kwargs['solver'] = 'SCIPY'
         if 'verbose' not in kwargs: kwargs['verbose'] = False
-        if kwargs['solver'] == 'SCIPY': kwargs['scipy_options'] = {'method':'highs-ipm'}
+        if kwargs['solver'] == 'SCIPY': kwargs['scipy_options'] = {'method':'highs'}
         if kwargs['verbose'] == True: kwargs['scipy_options'].update({'disp':True})
 
         try:
@@ -306,8 +309,8 @@ class LinProgModel():
 
 
         # prep results
-        self.price_contr = self.e_grids.value @ self.prices if self.objective_dict['price'] else np.NaN
-        self.carbon_contr = np.clip(self.e_grids.value,0,None) @ self.carbon_intensities if self.objective_dict['carbon'] else np.NaN
+        self.price_contr = np.maximum(self.e_grids.value,0) @ self.prices if self.objective_dict['price'] else np.NaN
+        self.carbon_contr = np.maximum(self.e_grids.value,0) @ self.carbon_intensities if self.objective_dict['carbon'] else np.NaN
         self.ramp_contr = np.sum(np.abs(self.e_grids.value[1:]-self.e_grids.value[:-1])) if self.objective_dict['ramping'] else np.NaN
         objective_breakdown = [
             self.price_contr/np.maximum(self.price_without.value,1),
