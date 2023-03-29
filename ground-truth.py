@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 
-    save_path = os.path.join('results','ground_truth_evaluations.json')
+    save_path = os.path.join('results','ground_truth_evaluations-%s.json')
     ground_truth_results = {}
 
     objective_dict = {'price':True,'carbon':True,'ramping':True}
@@ -174,7 +174,8 @@ if __name__ == '__main__':
             results['Tau'] = tau
             ground_truth_results[tau] = results
 
+    objective_dict['clip_level'] = clip_level
     ground_truth_results['objective'] = objective_dict
 
-    with open(save_path, 'w') as json_file:
+    with open(save_path%clip_level, 'w') as json_file:
         json.dump(ground_truth_results, json_file, indent=4)
