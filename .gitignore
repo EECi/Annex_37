@@ -21,3 +21,7 @@ venv/
 log*/
 linear*/
 *.csv
+
+# Temporary plots
+temp.html
+

@@ -238,16 +238,25 @@ class Predictor:
 
         Returns:
             x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t].
-            pred (ndarray): The predicted time series values. At time step 't', pred[t][i] gives the prediction for
-            x[t + 1 + i].
+            pred (ndarray): The predicted time series values.
+                For example pred[t] gives the predictions for time steps [t+1, ..., t+T].
+            gt (ndarray): The ground truth time series values.
+                For example gt[t] = x[t-L, ..., t+T], where x is the ground truth.
+            gt_t (ndarray): The time indices corresponding to each value in gt.
+                For example gt_t[t] = [t-L, ..., t+T].
+            pred_t (ndarray): The time indices corresponding to each value of pred.
+                For example, pred_t[t] = [t+1, ..., t+T].
+            mse (float): the mean squared error between the predictions and the groundtruth.
 
         Example:
-                building_index = 5
-                dataset_type = 'price'
-                expt_name = 'log_linear_L144_T48'
-                predictor = Predictor(expt_name=expt_name, load=True)
-                x, pred, _, _, _, mse = predictor.test_individual(building_index, dataset_type)
-                print(f'mse = {mse}')
+            building_index = 5
+            dataset_type = 'price'
+            expt_name = 'linear_L168_T48_test2'
+            predictor = Predictor(expt_name=expt_name, load=True)
+            x, pred, _, _, _, mse = predictor.test_individual(building_index, dataset_type)
+            plotter = IndividualPlotter(x, pred, dataset_type, window_size=500)
+            plotter.show()
+
 
         Notes:
               For testing, load must be set to True on Predictor instantiation. This will load the saved model given by
@@ -279,7 +288,9 @@ class Predictor:
         gt_list = []
         gt_t_list = []
         pred_t_list = []
-        for t, (x, y) in enumerate(test_dataloader):
+
+        t = 0
+        for x, y in test_dataloader:
             x_list.append(x[:, -1])
             y_hat = model(x)
             pred_list.append(y_hat.detach().numpy())
@@ -287,12 +298,13 @@ class Predictor:
             loss_list.append(error.detach().numpy())
             gt = np.concatenate([x, y], axis=1)
             gt_list.append(gt)
-            gt_t_list.append(np.arange(t, t + gt.shape[1]))
-            pred_t_list.append(np.arange(t + x.shape[1], t + x.shape[1] + y.shape[1]))
+            gt_t_list.append([np.arange(t + i, t + i + gt.shape[1]) for i in range(x.shape[0])])
+            pred_t_list.append([np.arange(t + i + x.shape[1], t + i + x.shape[1] + y.shape[1]) for i in range(x.shape[0])])
+            t += x.shape[0]
 
-        gt = np.concatenate(gt_list)
-        gt_t = np.array(gt_t_list)
-        pred_t = np.array(pred_t_list)
+        gt = np.concatenate(gt_list, axis=0)
+        gt_t = np.concatenate(gt_t_list, axis=0)
+        pred_t = np.concatenate(pred_t_list, axis=0)
         x = np.concatenate(x_list)
         pred = np.concatenate(pred_list)
         mse = np.mean(np.concatenate(loss_list))
@@ -372,7 +384,7 @@ class Predictor:
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
         load = np.array(out['load'])
-        solar = np.array(out['solar'])
+        solar = np.tile(out['solar'], (load.shape[0], 1))
         price = np.array(out['price']).reshape(-1)
         carbon = np.array(out['carbon']).reshape(-1)
         return load, solar, price, carbon

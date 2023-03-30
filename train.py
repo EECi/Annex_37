@@ -3,8 +3,8 @@ import glob
 from predictor import Predictor
 
 
-L = 48
-T = 168
+L = 168
+T = 48
 expt_name = f'linear_L{L}_T{T}'
 mparam_dict = {'all': {'model_name': 'vanilla',
                        'mparam': {'L': L,
