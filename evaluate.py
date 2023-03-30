@@ -150,10 +150,11 @@ if __name__ == '__main__':
     L = 168
     tau = 48
     expt_name = f'linear_L{L}_T{tau}'
-    evaluate_file = 'evaluate.csv'
+    evaluate_file = os.path.join('logs', 'evaluate.csv')
 
     dataset_dir = os.path.join('example', 'test')   # dataset directory
-    schema_path = os.path.join('data', dataset_dir, 'schema.json')
+    # schema_path = os.path.join('data', dataset_dir, 'schema.json')
+    schema_path = os.path.join('data', dataset_dir, 'schema2.json')  # tripled solar nominal power
 
     header = ['experiment', 'price', 'carbon', 'grid']
     if not os.path.exists(evaluate_file):
