@@ -158,7 +158,7 @@ if __name__ == '__main__':
     objective_dict = {'price':True,'carbon':True,'ramping':True}
     clip_level = 'b' # aggregation level for objective
 
-    tau = 12 # model prediction horizon (number of timesteps of data predicted)
+    tau = 48 # model prediction horizon (number of timesteps of data predicted)
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore',module=r'cvxpy')

@@ -158,7 +158,6 @@ if __name__ == '__main__':
 
     objective_dict = {'price':True,'carbon':True,'ramping':True}
     clip_level = 'b' # aggregation level for objective
-    abuff_length = 1
 
     taus = [6,12,24,48,72,120,168] # model prediction horizon (number of timesteps of data predicted)
 
@@ -166,6 +165,7 @@ if __name__ == '__main__':
         warnings.filterwarnings(action='ignore',module=r'cvxpy')
 
         for tau in taus:
+            abuff_length = 1
             print("=======================Evaluation========================")
             print(f"Tau: {tau}")
             results = evaluate_ground_truth(schema_path, tau, objective_dict, clip_level, abuff_length)
