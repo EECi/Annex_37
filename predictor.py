@@ -84,7 +84,8 @@ class Predictor:
         self.results_file = os.path.join('logs', results_file)
 
         self.training_order = [f'load_{b}' for b in building_indices]
-        self.training_order += ['solar', 'carbon', 'price']
+        self.training_order += [f'solar_{b}' for b in building_indices]
+        self.training_order += ['carbon', 'price']
 
         self.models = {}
         if 'all' in mparam_dict.keys():
@@ -133,7 +134,7 @@ class Predictor:
             building_index (int): Index of the building for which to generate forecasts.
             dataset_type (str): Type of dataset to use for prediction. Must be one of
                 ('solar', 'load', 'carbon', 'price').
-            key (str): Represents the dataset type and building index (e.g. 'solar', 'load_5, 'price', 'carbon').
+            key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train the model.
 
@@ -234,7 +235,7 @@ class Predictor:
             building_index (int): Index of the building for which to generate forecasts.
             dataset_type (str): Type of dataset to use for prediction. Must be one of
             ('solar', 'load', 'carbon', 'price').
-            key (str): Represents the dataset type and building index (e.g. 'solar', 'load_5, 'price', 'carbon').
+            key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
 
         Returns:
             x (ndarray): The ground truth time series values. At time index 't', the ground truth value x[t].
@@ -315,7 +316,7 @@ class Predictor:
 
         Args:
             key (str): A string containing the dataset type and building index, separated by an underscore.
-                Example: 'load_5', 'load_11', 'carbon', 'price', 'solar'.
+                Example: 'load_5', 'load_11', 'carbon', 'price', 'solar_5'.
 
         Returns:
             Tuple[int, str]: A tuple containing the building index (int) and dataset type (str).
@@ -324,9 +325,9 @@ class Predictor:
         Notes:
             'carbon', 'price' and 'solar is shared between the buildings so will return the same building index.
         """
-        if '_' in key:  # load
+        if '_' in key:  # solar, load
             dataset_type, building_index = key.split('_')
-        else:  # solar, carbon and price
+        else:  # carbon and price
             building_index = self.building_indices[0]
             dataset_type = key
         return building_index, dataset_type
@@ -340,11 +341,11 @@ class Predictor:
                 'solar', 'load', 'price', or 'carbon'.
 
         Returns:
-            str: A string representing the key, in the format "<dataset_type>_<building_index>" (load)
-                or "<dataset_type>" ('solar', 'carbon', 'price).
+            str: A string representing the key, in the format "<dataset_type>_<building_index>" (load, solar)
+                or "<dataset_type>" ('carbon', 'price).
         """
         key = dataset_type
-        if dataset_type not in ('solar', 'price', 'carbon'):
+        if dataset_type not in ('price', 'carbon'):
             key += '_' + str(building_index)
         return key
 
@@ -384,7 +385,7 @@ class Predictor:
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
         load = np.array(out['load'])
-        solar = np.tile(out['solar'], (load.shape[0], 1))
+        solar = np.array(out['solar'])
         price = np.array(out['price']).reshape(-1)
         carbon = np.array(out['carbon']).reshape(-1)
         return load, solar, price, carbon

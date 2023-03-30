@@ -147,7 +147,7 @@ def evaluate(schema_path,
 if __name__ == '__main__':
     import warnings
 
-    L = 168
+    L = 48
     tau = 48
     expt_name = f'linear_L{L}_T{tau}'
     evaluate_file = os.path.join('logs', 'evaluate.csv')
