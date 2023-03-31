@@ -1,31 +1,33 @@
 #!/usr/bin/env python
 """
-Evaluate performance of predictor model.
-
-Apply linear MPC with provided predictor model to CityLearn environment
-with specified dataset to evaluate predictor performance.
+Compute performance of LinMPC controller with 'ground truth' forecasts
+on given dataset.
 """
 
 import os
+import json
 import time
 import numpy as np
 import cvxpy as cp
 
+from tqdm import tqdm
+
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from predictor import Predictor
 
 
-def evaluate(schema_path,
+def evaluate_ground_truth(
+    schema_path,
     tau,
     objective_dict = {'price':True,'carbon':True,'ramping':True},
     clip_level = 'd',
+    abuff_length = 1,
     **kwargs
     ):
-    """Evaluate performance of LinMPC controller with given Predictor model.
+    """Evaluate performance of LinMPC controller using perfect ('ground truth') forecasts.
 
     Args:
-        schema_path (Str or os.Path): path to schema defining simulation data.
+        schema_path (str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         objective_dict (dict, optional): dictionary defining objective contributions
         to use in LinMPC objective. Defaults to {'price':True,'carbon':True,'ramping':True}.
@@ -34,10 +36,11 @@ def evaluate(schema_path,
         meaning the costs are those for the overall portfolio of buildings, allowing energy
         transfer between building. For 'b', building power flows are clipped and the costs are
         the mean building level costs, assuming no interaction effects/cost coordination. Defaults to 'd'.
+        abuff_length (int): length of control action aggregation buffer to use.
 
     Returns:
         results (dict): dictionary containing costs (contributions & overall) from model evaluation, and
-        forecasting & LP solve time.
+        LP solve time.
     """
 
     print("Starting evaluation.")
@@ -45,68 +48,67 @@ def evaluate(schema_path,
     # Initialise CityLearn environment object.
     env = CityLearnEnv(schema=schema_path)
 
+    for b in range(len(env.buildings)): # hack prices to be non-neg
+        env.buildings[b].pricing.electricity_pricing = np.maximum(env.buildings[b].pricing.electricity_pricing,0)
+
     # Initialise Linear MPC object.
     lp = LinProgModel(env=env)
     lp.set_battery_propery_data()
     lp.tau = tau
     lp.generate_LP(objective_dict=objective_dict, clip_level=clip_level)
 
-    # Initialise Predictor object.
-
-    # ========================================================================
-    # insert your import & setup code for your predictor here.
-    # ========================================================================
-
-    predictor = Predictor(len(lp.b_inds), tau)
-
-
     # Initialise control loop.
-    forecast_time_elapsed = 0
     lp_solver_time_elapsed = 0
     num_steps = 0
     done = False
 
+    # Initialise environment.
     observations = env.reset()
     soc_obs_index = 22
     current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)]) # get initial SoCs
 
+    # Create action buffer for control action batching.
+    actions_buffer = []
+    assert abuff_length <= tau, "Action buffer length cannot exceed planning horizon."
+
     # Execute control loop.
-    while not done:
-        if num_steps % 100 == 0:
-            print(f"Num Steps: {num_steps} ({np.round(100*num_steps/env.time_steps,1)}%)")
+    with tqdm(total=env.time_steps) as pbar:
 
-        # Compute MPC action.
-        # ====================================================================
+        while not done:
+            if num_steps%100 == 0:
+                pbar.update(100)
 
-        # make forecasts using predictor
-        forecast_start = time.perf_counter()
-        forecasts = predictor.compute_forecast(observations)
-        forecast_time_elapsed += time.perf_counter() - forecast_start
+            # Compute MPC action.
+            # ====================================================================
 
-        if forecasts is None: # forecastor opt out
-            actions = np.zeros((len(lp.b_inds),1))
-        else:
-            # setup and solve predictive Linear Program model of system
-            lp_start = time.perf_counter()
-            lp.set_custom_time_data(*forecasts, current_socs=current_socs)
-            lp.set_LP_parameters()
-            _,_,_,_,alpha_star = lp.solve_LP()
-            actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
-            lp_solver_time_elapsed += time.perf_counter() - lp_start
+            if len(actions_buffer) > 0: # take action from buffer
+                actions = actions_buffer[0]
+                actions_buffer.pop(0)
 
-        # ====================================================================
-        # insert your logging code here
-        # ====================================================================
+            else: # compute an action
+                if num_steps <= (env.time_steps - 1) - tau:
+                    # setup and solve predictive Linear Program model of system
+                    lp_start = time.perf_counter()
+                    lp.set_time_data_from_env(t_start=num_steps, tau=tau, current_socs=current_socs) # load ground truth data
+                    lp.set_LP_parameters()
+                    _,_,_,_,alpha_star = lp.solve_LP()
+                    actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
+                    lp_solver_time_elapsed += time.perf_counter() - lp_start
 
-        # Apply action to environment.
-        # ====================================================================
-        observations, _, done, _ = env.step(actions)
+                    actions_buffer = [alpha_star[:,t].reshape(len(lp.b_inds),1) for t in range(1,abuff_length)] if abuff_length > 1 else []
 
-        # Update battery states-of-charge
-        # ====================================================================
-        current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)])
+                else: # if not enough time left to grab a full length ground truth forecast: do nothing
+                    actions = np.zeros((len(lp.b_inds),1))
 
-        num_steps += 1
+            # Apply action to environment.
+            # ====================================================================
+            observations, _, done, _ = env.step(actions)
+
+            # Update battery states-of-charge
+            # ====================================================================
+            current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)])
+
+            num_steps += 1
 
     print("Evaluation complete.")
 
@@ -137,15 +139,11 @@ def evaluate(schema_path,
         'Emissions Cost':emissions_cost,
         'Grid Cost':grid_cost,
         'Overall Cost':overall_cost,
-        'Forecast Time': forecast_time_elapsed,
         'Solve Time':lp_solver_time_elapsed
     }
 
-    # ========================================================================
-    # insert your logging code here
-    # ========================================================================
-
     return results
+
 
 
 if __name__ == '__main__':
@@ -155,12 +153,29 @@ if __name__ == '__main__':
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 
+    save_path = os.path.join('results','ground_truth_evaluations-%s.json')
+    ground_truth_results = {}
+
     objective_dict = {'price':True,'carbon':True,'ramping':True}
     clip_level = 'b' # aggregation level for objective
 
-    tau = 48 # model prediction horizon (number of timesteps of data predicted)
+    taus = [6,12,24,48,72,120,168] # model prediction horizon (number of timesteps of data predicted)
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore',module=r'cvxpy')
 
-        results = evaluate(schema_path, tau, objective_dict, clip_level)
+        for tau in taus:
+            abuff_length = 1
+            print("=======================Evaluation========================")
+            print(f"Tau: {tau}")
+            results = evaluate_ground_truth(schema_path, tau, objective_dict, clip_level, abuff_length)
+            print("\n")
+
+            results['Tau'] = tau
+            ground_truth_results[tau] = results
+
+    objective_dict['clip_level'] = clip_level
+    ground_truth_results['objective'] = objective_dict
+
+    with open(save_path%clip_level, 'w') as json_file:
+        json.dump(ground_truth_results, json_file, indent=4)

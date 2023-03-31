@@ -1,0 +1,64 @@
+{
+    "6": {
+        "Price Cost": 1.0140767533206008,
+        "Emissions Cost": 1.0116638937244737,
+        "Grid Cost": 0.8109712266601081,
+        "Overall Cost": 0.945570624568394,
+        "Solve Time": 64.53109878099951,
+        "Tau": 6
+    },
+    "12": {
+        "Price Cost": 1.0009013575686818,
+        "Emissions Cost": 0.9989421888833462,
+        "Grid Cost": 0.6972571725140116,
+        "Overall Cost": 0.8990335729886798,
+        "Solve Time": 34.86530504199955,
+        "Tau": 12
+    },
+    "24": {
+        "Price Cost": 0.9903204516777885,
+        "Emissions Cost": 0.985958538732472,
+        "Grid Cost": 0.33310869206520793,
+        "Overall Cost": 0.7697958941584894,
+        "Solve Time": 26.661617914999994,
+        "Tau": 24
+    },
+    "48": {
+        "Price Cost": 0.9891692911547145,
+        "Emissions Cost": 0.9832213144630328,
+        "Grid Cost": 0.3011782333243743,
+        "Overall Cost": 0.7578562796473739,
+        "Solve Time": 22.68899912799995,
+        "Tau": 48
+    },
+    "72": {
+        "Price Cost": 0.9890721161744063,
+        "Emissions Cost": 0.9769012856393541,
+        "Grid Cost": 0.2985992718603957,
+        "Overall Cost": 0.7548575578913854,
+        "Solve Time": 26.06228044299965,
+        "Tau": 72
+    },
+    "120": {
+        "Price Cost": 0.9863366396409812,
+        "Emissions Cost": 0.9673854679213955,
+        "Grid Cost": 0.33194362400164107,
+        "Overall Cost": 0.7618885771880058,
+        "Solve Time": 36.23464191600033,
+        "Tau": 120
+    },
+    "168": {
+        "Price Cost": 0.9825433014283065,
+        "Emissions Cost": 0.9757742694092689,
+        "Grid Cost": 0.3152333895479467,
+        "Overall Cost": 0.7578503201285075,
+        "Solve Time": 39.14177833199989,
+        "Tau": 168
+    },
+    "objective": {
+        "price": true,
+        "carbon": true,
+        "ramping": true,
+        "clip_level": "b"
+    }
+}
