@@ -211,7 +211,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 130.0
+                    "nominal_power": 178.0
                 }
             }
         },
@@ -257,7 +257,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 115.0
+                    "nominal_power": 41.0
                 }
             }
         },
@@ -303,7 +303,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 113.0
+                    "nominal_power": 57.0
                 }
             }
         },
@@ -349,7 +349,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 109.0
+                    "nominal_power": 120.0
                 }
             }
         },
@@ -395,7 +395,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 198.0
+                    "nominal_power": 1349.0
                 }
             }
         },
@@ -441,7 +441,7 @@
                 "type": "citylearn.energy_model.PV",
                 "autosize": false,
                 "attributes": {
-                    "nominal_power": 190.0
+                    "nominal_power": 257.0
                 }
             }
         }
