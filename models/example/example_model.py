@@ -14,10 +14,12 @@ This class must have the following methods:
 You may wish to implement additional methods to make your model code neater.
 """
 
+from ..base_predictor_model import BasePredictorModel
+
 import numpy as np
 
 
-class ExamplePredictor:
+class ExamplePredictor(BasePredictorModel):
 
     def __init__(self, N: int, tau: int):
         """Initialise Prediction object and perform setup.
@@ -35,6 +37,7 @@ class ExamplePredictor:
         self.tau = tau
 
         # Load in pre-computed prediction model.
+        self.load()
         # ====================================================================
         # insert your loading code here
         # ====================================================================
@@ -49,6 +52,11 @@ class ExamplePredictor:
         # ====================================================================
         self.prev_vals = {'loads': None, 'pv_gens': None, 'price': None, 'carbon': None}
         # ====================================================================
+
+
+    def load(self):
+        """No loading required for trivial example model."""
+        pass
 
 
     def compute_forecast(self, observations):
