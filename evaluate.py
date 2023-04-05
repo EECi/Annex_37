@@ -13,7 +13,7 @@ import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from predictor import Predictor
+from models import ExamplePredictor as Predictor
 
 
 def evaluate(schema_path,

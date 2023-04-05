@@ -17,7 +17,7 @@ You may wish to implement additional methods to make your model code neater.
 import numpy as np
 
 
-class Predictor:
+class ExamplePredictor:
 
     def __init__(self, N: int, tau: int):
         """Initialise Prediction object and perform setup.
