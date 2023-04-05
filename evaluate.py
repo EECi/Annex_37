@@ -123,7 +123,9 @@ def evaluate(schema_path,
         emissions_cost = metrics.iloc[2].value if objective_dict['carbon'] else np.NaN
 
     grid_cost = np.mean([metrics.iloc[0].value, metrics.iloc[6].value]) if objective_dict['ramping'] else np.NaN
-    overall_cost = np.nanmean([price_cost,emissions_cost,grid_cost])
+    cost_contributions = np.array([price_cost,emissions_cost,grid_cost])
+    cost_weights = np.array([objective_dict[key] for key in ['price','carbon','ramping']]) # enforce ordering
+    overall_cost = cost_contributions[~np.isnan(cost_contributions)] @ cost_weights[~np.isnan(cost_contributions)]
 
     print("=========================Results=========================")
     print(f"Price Cost: {round(price_cost,5)}")
