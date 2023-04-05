@@ -166,8 +166,9 @@ class LinProgModel():
         see comments in implementation for details.
 
         Args:
-            objective_dict (Dict[str,bool] ,optional): dictionary indicating whether to use
-            objective contributions is overall objective of LP.
+            objective_dict (Dict[str,bool or float] ,optional): dictionary indicating contribution weightings
+            in overall objective of LP. keys: objective contributions, values: either bools indicating
+            whether to use the contribution in an even weighting, or an explicit normalised float weighting.
             clip_level (Str, optional): str, either 'd' (district) or 'b' (building), indicating
             the level at which to clip cost values in the objective function
         """
@@ -175,8 +176,20 @@ class LinProgModel():
         if not hasattr(self,'buildings'): raise NameError("Building properties must be set before LP can be generated.")
         if not hasattr(self,'tau'): raise NameError("Planning horizon must be set before LP can be generated.")
 
-        assert True in list(objective_dict.values()), "Objective cannot be empty, `objective_dict` must contain at least one 'True' entry."
-        self.objective_dict = objective_dict
+        assert all([type(val) in [bool,float] for val in objective_dict.values()])
+        # weightings must sum to one unless all are Bools, at which point an even weighting is applied to contributions with value 'True'
+        if all([type(val) == bool for val in objective_dict.values()]):
+            assert True in list(objective_dict.values()), "Objective cannot be empty, `objective_dict` must contain at least one 'True' entry."
+        else:
+            np.testing.assert_approx_equal(np.sum(list(objective_dict.values())), 1.0, significant=3, err_msg="Objective contributions do not sum to 1.")
+
+        self.objective_dict = objective_dict.copy()
+
+        if True in list(self.objective_dict.values()): # if Boolean weightings given
+            n_trues = list(self.objective_dict.values()).count(True)
+            for key,val in self.objective_dict.items():
+                if val == True:
+                    self.objective_dict[key] = 1/n_trues # set True contributions as evenly weighted
 
         assert clip_level in ['d','b'], "`clip_level` value must be either 'd' (district) or 'b' (building)."
 
@@ -281,9 +294,11 @@ class LinProgModel():
         if objective_dict['ramping']:
             objective_contributions.append(cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/cp.maximum(self.ramp_without,1))
 
-        objective_contributions = cp.vstack(objective_contributions) # convert to cvxpy array
+        objective_contributions = cp.hstack(objective_contributions) # convert to 1d cvxpy array
 
-        self.obj = cp.sum(objective_contributions)/objective_contributions.size
+        obj_weights = np.array([self.objective_dict[key] for key in ['price','carbon','ramping'] if self.objective_dict[key]]) # enforces ordering and removes nulls
+
+        self.obj = objective_contributions @ obj_weights
 
         self.objective = cp.Minimize(self.obj)
 
@@ -343,12 +358,12 @@ class LinProgModel():
         self.price_contr = np.maximum(self.e_grids.value,0) @ self.prices if self.objective_dict['price'] else np.NaN
         self.carbon_contr = np.maximum(self.e_grids.value,0) @ self.carbon_intensities if self.objective_dict['carbon'] else np.NaN
         self.ramp_contr = np.sum(np.abs(self.e_grids.value[1:]-self.e_grids.value[:-1])) if self.objective_dict['ramping'] else np.NaN
-        objective_breakdown = [
+        objective_breakdown = np.array([
             self.price_contr/np.maximum(self.price_without.value,1),
             self.carbon_contr/np.maximum(self.carbon_without.value,1),
             self.ramp_contr/np.maximum(self.ramp_without.value,1)
-            ]
-        obj_check = np.nanmean(objective_breakdown)
+            ])
+        obj_check = objective_breakdown[~np.isnan(objective_breakdown)] @ np.array(list(self.objective_dict.values()))[~np.isnan(objective_breakdown)]
 
         return self.objective.value, objective_breakdown, obj_check, self.SoC.value, self.alpha.value
 
