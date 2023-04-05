@@ -295,7 +295,6 @@ class LinProgModel():
             objective_contributions.append(cp.norm(self.e_grids[1:]-self.e_grids[:-1],1)/cp.maximum(self.ramp_without,1))
 
         objective_contributions = cp.hstack(objective_contributions) # convert to 1d cvxpy array
-
         obj_weights = np.array([self.objective_dict[key] for key in ['price','carbon','ramping'] if self.objective_dict[key]]) # enforces ordering and removes nulls
 
         self.obj = objective_contributions @ obj_weights
@@ -363,7 +362,8 @@ class LinProgModel():
             self.carbon_contr/np.maximum(self.carbon_without.value,1),
             self.ramp_contr/np.maximum(self.ramp_without.value,1)
             ])
-        obj_check = objective_breakdown[~np.isnan(objective_breakdown)] @ np.array(list(self.objective_dict.values()))[~np.isnan(objective_breakdown)]
+        obj_weights = np.array([self.objective_dict[key] for key in ['price','carbon','ramping'] if self.objective_dict[key]]) # enforces ordering and removes nulls
+        obj_check = objective_breakdown[~np.isnan(objective_breakdown)] @ obj_weights[~np.isnan(objective_breakdown)]
 
         return self.objective.value, objective_breakdown, obj_check, self.SoC.value, self.alpha.value
 
