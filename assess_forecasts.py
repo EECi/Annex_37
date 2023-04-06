@@ -15,7 +15,7 @@ import cvxpy as cp
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from predictor import Predictor
+from models import ExamplePredictor as Predictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
