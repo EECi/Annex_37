@@ -92,6 +92,12 @@ Participants are free to implement additional methods for their `Predictor` clas
 
 For training forecasting strategies, the training dataset is directly available in the `data` directory.
 
+## Forecast Assessment
+
+The quality of forecasting achieved by the implemented prediction method (w.r.t. its match to true/ground-truth values) can be evaluated by running `assess_forecasts.py`, with suitable settings specified within the file.
+
+Please edit the file to assess your forecasts as desired.
+
 
 ## Evaluation
 
