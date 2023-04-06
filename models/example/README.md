@@ -1,13 +1,23 @@
 # Example Prediction Model
 
-... explain what the model is and how it works ...
+1. Explain what the model is and a brief description of what it's doing/how is works
 
-... is there anything else we should know ...
+2. Provide references for the model
+
+3. Provide a list of strengths and weaknesses, and assumptions of the method
+
+4. Provide any other information that would be helpful to users of the model
 
 ## Directory Structure
 
-- `example_model.py` - ... model implementation ...
-- `example_train.py` - ... trains model ...
-- `example_test.py` - ... test model as ...
-- `resources` - ... contains pre-trained models, etc. ...
+Outline the structure of the directory and the files you have provided. E.g.,
+
+- `example_model.py` - implementation of example model
+- `example_train.py` - script for training example model
+- `example_test.py` - script for testing example model in the following way ...
+- `resources` - contains data files for pre-trained version of model: example1, example2, etc.
 - ...
+
+## Any other notes
+
+E.g. preliminary results, suggestions for further work and improvements, points worth mentioning in the journal paper.
