@@ -147,7 +147,6 @@ def evaluate_ground_truth(
     return results
 
 
-
 if __name__ == '__main__':
     import warnings
 

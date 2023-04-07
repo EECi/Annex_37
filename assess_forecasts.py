@@ -15,7 +15,7 @@ import cvxpy as cp
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor as Predictor
+from models import ExamplePredictor, DMSPredictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -42,7 +42,7 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
     for forecast, actual in zip(forecasts_array, ground_truth_array):
         a = np.array(actual)
         f = np.array(forecast)[:len(a)]
-        metric_scores.append(metric(f,a))
+        metric_scores.append(metric(f, a))
 
     metric_score = np.mean(metric_scores)
 
@@ -51,11 +51,13 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
 
     return metric_score
 
+
 def MAE(prediction, actual):
     return np.mean(np.abs((prediction-actual)))
 
+
 def RMSE(prediction, actual):
-    return np.sqrt(np.mean(np.power(prediction-actual,2)))
+    return np.sqrt(np.mean(np.power(prediction-actual, 2)))
 
 
 def assess(schema_path, tau, building_breakdown=False, **kwargs):
@@ -84,13 +86,14 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     # insert your import & setup code for your predictor here.
     # ========================================================================
 
-    predictor = Predictor(len(env.buildings), tau)
+    # predictor = ExamplePredictor(len(env.buildings), tau)
+    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
 
     # Initialise logging objects.
-    load_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
-    pv_gen_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
-    pricing_logs = {'forecasts':[], 'actuals':[]}
-    carbon_logs = {'forecasts':[], 'actuals':[]}
+    load_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
+    pv_gen_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
+    pricing_logs = {'forecasts': [], 'actuals': []}
+    carbon_logs = {'forecasts': [], 'actuals': []}
 
     # Initialise forecasting loop.
     forecast_time_elapsed = 0
@@ -103,7 +106,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     with tqdm(total=env.time_steps) as pbar:
 
         while not done:
-            if num_steps%100 == 0:
+            if num_steps % 100 == 0:
                 pbar.update(100)
 
             # Compute forecast.
@@ -112,11 +115,11 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
             # Perform logging.
-            if forecasts is None: # forecastor opt out
-                pass # no forecast to evaluate
+            if forecasts is None:   # forecastor opt out
+                pass    # no forecast to evaluate
             else:
                 # Log forecasts.
-                for i,b in enumerate(env.buildings):
+                for i, b in enumerate(env.buildings):
                     load_logs[b.name]['forecasts'].append(forecasts[0][i])
                     pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i])
                 pricing_logs['forecasts'].append(forecasts[2])
@@ -139,13 +142,13 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
     # Compute forecasting performance metrics.
     metrics = [MAE,RMSE]
-    metric_names = ['gmnMAE','gmnRMSE']
-    globally_mean_normalised = [True,True]
+    metric_names = ['gmnMAE', 'gmnRMSE']
+    globally_mean_normalised = [True, True]
 
     load_metrics = {
         b.name:{
-            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'],metric,gnorm)\
-                for metric,mname,gnorm in zip(metrics,metric_names,globally_mean_normalised)
+            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'], metric, gnorm)\
+                for metric, mname, gnorm in zip(metrics, metric_names, globally_mean_normalised)
         } for b in env.buildings
     }
     load_metrics['buildings_average'] = {mname: np.mean([load_metrics[b.name][mname] for b in env.buildings])\
@@ -213,6 +216,7 @@ if __name__ == '__main__':
     tau = 48 # model prediction horizon (number of timesteps of data predicted)
 
     with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore',module=r'cvxpy')
-
+        warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = assess(schema_path, tau, building_breakdown=True)
+
+    # todo: visualise results

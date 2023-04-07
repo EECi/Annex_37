@@ -2,14 +2,16 @@
 
 from abc import ABC, abstractmethod
 
+
 class BasePredictorModel(ABC):
     """Abstract class defining interfaces required by prediction
     model implementations."""
 
-    @abstractmethod
-    def load(self):
-        """Method to load pre-trained model from save file."""
-        pass
+    # todo: delete
+    # @abstractmethod
+    # def load(self):
+    #     """Method to load pre-trained model from save file."""
+    #     pass
 
     @abstractmethod
     def compute_forecast(self, observations):
