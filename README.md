@@ -21,6 +21,8 @@ For information on the the setup of the task, see the `README` on the `main` bra
 
 # How to use the branch
 
+... [`leaderboard`](outputs/leaderboard.md)
+
 ... explain structure of branch directories ...
 
 ... explain how to add a model ...
