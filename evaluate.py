@@ -16,7 +16,8 @@ from linmodel import LinProgModel
 from models import ExamplePredictor, DMSPredictor
 
 
-def evaluate(schema_path,
+def evaluate(predictor,
+             schema_path,
              tau,
              objective_dict={'price': True, 'carbon': True, 'ramping': True},
              clip_level='d',
@@ -24,6 +25,7 @@ def evaluate(schema_path,
     """Evaluate performance of LinMPC controller with given Predictor model.
 
     Args:
+        predictor # todo
         schema_path (Str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         objective_dict (dict, optional): dictionary defining objective contributions
@@ -50,13 +52,14 @@ def evaluate(schema_path,
     lp.tau = tau
     lp.generate_LP(objective_dict=objective_dict, clip_level=clip_level)
 
-    # Initialise Predictor object.
-    # ========================================================================
-    # insert your import & setup code for your predictor here.
-    # ========================================================================
-
-    # predictor = ExamplePredictor(len(lp.b_inds), tau)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
+    # todo: remove
+    # # Initialise Predictor object.
+    # # ========================================================================
+    # # insert your import & setup code for your predictor here.
+    # # ========================================================================
+    #
+    # # predictor = ExamplePredictor(len(lp.b_inds), tau)
+    # predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
 
     # Initialise control loop.
     forecast_time_elapsed = 0
@@ -151,15 +154,21 @@ def evaluate(schema_path,
 if __name__ == '__main__':
     import warnings
 
-    dataset_dir = os.path.join('example', 'test')   # dataset directory
+    # Set parameters and instantiate predictor
+    # ==================================================================================================================
+    # Instantiate Predictor
+    # predictor = ExamplePredictor(6, 48)
+    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
 
-    schema_path = os.path.join('data', dataset_dir, 'schema.json')
-
+    # Evaluation parameters
     objective_dict = {'price': True, 'carbon': True, 'ramping': True}
     clip_level = 'b'     # aggregation level for objective
+    # ==================================================================================================================
 
+    # evaluate predictor
+    dataset_dir = os.path.join('example', 'test')   # dataset directory
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
     tau = 48    # model prediction horizon (number of timesteps of data predicted)
-
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = evaluate(schema_path, tau, objective_dict, clip_level)
+        results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)

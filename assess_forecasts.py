@@ -8,6 +8,7 @@ in comparison to ground truth values of prediction variables.
 """
 
 import os
+import csv
 import time
 import numpy as np
 import cvxpy as cp
@@ -60,11 +61,12 @@ def RMSE(prediction, actual):
     return np.sqrt(np.mean(np.power(prediction-actual, 2)))
 
 
-def assess(schema_path, tau, building_breakdown=False, **kwargs):
+def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     """Evaluate forecasting performance of given Predictor model for
     dataset specified by provided schema.
 
     Args:
+        predictor   # todo: docstring
         schema_path (Str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         building_breakdown (bool): indicator for whether building resolved
@@ -85,9 +87,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     # ========================================================================
     # insert your import & setup code for your predictor here.
     # ========================================================================
-
-    # predictor = ExamplePredictor(len(env.buildings), tau)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
 
     # Initialise logging objects.
     load_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
@@ -194,7 +193,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
             print("---Solar Generation---")
             for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics[b.name][mname],5)}")
 
-
     results = {
         'Load Forecasts': load_metrics,
         'Solar Generation Forecasts': pv_gen_metrics,
@@ -209,14 +207,54 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 if __name__ == '__main__':
     import warnings
 
-    dataset_dir = os.path.join('example','test') # dataset directory
+    # Set parameters and instantiate predictor
+    # ==================================================================================================================
+    # Parameters
+    save = True
+    plot = True
+    model_name = 'linear_L168_T48'
+    results_file = 'forecast_results.csv'
+    results_file = os.path.join('outputs', results_file)
 
-    schema_path = os.path.join('data',dataset_dir,'schema.json')
+    # Instantiate predictor
+    # predictor = ExamplePredictor(6, 48)
+    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
+    # ==================================================================================================================
 
-    tau = 48 # model prediction horizon (number of timesteps of data predicted)
-
+    # assess forecasts
+    tau = 48  # model prediction horizon (number of timesteps of data predicted)
+    dataset_dir = os.path.join('example', 'test')  # dataset directory
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = assess(schema_path, tau, building_breakdown=True)
+        results = assess(predictor, schema_path, tau, building_breakdown=True)
+
+    if save:
+        header = ['Model', 'P', 'C']
+        load_header = [
+            'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
+        solar_header = [
+            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+
+        header += load_header
+        header += solar_header
+        out = [model_name, results['Pricing Forecasts']['gmnMAE'], results['Carbon Intensity Forecasts']['gmnMAE']]
+
+        for k, v in results['Load Forecasts'].items():
+            if 'average' not in k:
+                out.append(v['gmnMAE'])
+        for k, v in results['Solar Generation Forecasts'].items():
+            if 'average' not in k:
+                out.append(v['gmnMAE'])
+
+        if not os.path.exists(results_file):
+            with open(results_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(out)
 
     # todo: visualise results
+    if plot:
+        pass
