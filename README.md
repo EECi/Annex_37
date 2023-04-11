@@ -29,15 +29,15 @@ If you would like to find out more about the approaches we are taking, would lik
 
 # How to use the branch
 
-Once you have a complete model implementation, you can add it to the library of methods hosted in the `models` directory by doing the following:
+Once you have a complete model implementation, you can add it to the library of methods in the `models` directory by doing the following:
 - create a new sub-directory for your model - `models/<your model name>`
 - wrap the implementation of your model in a class in its own script, e.g. `models/<your model name>/model.py` containing the class `MyModel`
     - this class must have a method `compute_forecast`, which takes in the array of current observations, and returns arrays for the forecasted variables - see documentation and example docstrings for required formatting
-    - you should provide sensible default parameters (e.g. kwargs) so that a 'good' forecasting model is set up when an object of your class is constructed/initialised without arguments
-- you can should additional scripts as necessary to allow others to work with your model, e.g. for training, testing, interrogating, etc.
+    - you should provide sensible default parameters (e.g. kwargs) so that a 'good' forecasting model is set up when an object of your class is constructed/initialised without arguments, e.g. load an up-to-date pre-trained model by default
+- you should provide additional scripts as necessary to allow others to work with your model, e.g. for training, testing, interrogating, etc.
 - put any required data files, e.g. pre-trained model specifications, in a sub-directory called `resources`
 - update `models/__init__.py` to import your model class
-- **provide a README in your model directory detailing: your model, the files you've provided, your preliminary results, any other important info**
+- **provide a `README.md` in your model directory detailing: your model, the files you've provided, your preliminary results, any other important info**
 
 An example model implementation directory is given at `models/example`.
 
