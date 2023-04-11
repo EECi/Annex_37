@@ -29,8 +29,24 @@ If you would like to find out more about the approaches we are taking, would lik
 
 # How to use the branch
 
-... [`leaderboard`](outputs/leaderboard.md)
+Once you have a complete model implementation, you can add it to the library of methods hosted in the `models` directory by doing the following:
+- create a new sub-directory for your model - `models/<your model name>`
+- wrap the implementation of your model in a class in its own script, e.g. `models/<your model name>/model.py` containing the class `MyModel`
+    - this class must have a method `compute_forecast`, which takes in the array of current observations, and returns arrays for the forecasted variables - see documentation and example docstrings for required formatting
+    - you should provide sensible default parameters (e.g. kwargs) so that a 'good' forecasting model is set up when an object of your class is constructed/initialised without arguments
+- you can should additional scripts as necessary to allow others to work with your model, e.g. for training, testing, interrogating, etc.
+- put any required data files, e.g. pre-trained model specifications, in a sub-directory called `resources`
+- update `models/__init__.py` to import your model class
+- **provide a README in your model directory detailing: your model, the files you've provided, your preliminary results, any other important info**
 
-... explain structure of branch directories ...
+An example model implementation directory is given at `models/example`.
 
-... explain how to add a model ...
+<br>
+
+ToDo: ... [`leaderboard`](outputs/leaderboard.md) ... `outputs` directory ...
+
+<br>
+
+If you wish to test your model in this framework you can run `assess_forecasts.py` and `evaluate.py`, editing the runtime sections of the scripts appropriately. *However it is recommended that you do this testing in your development branch before merging your model implementation*.
+
+*Note: all scripts should be executed from the base `EECi` directory, and all file paths are specified relative to this.*
