@@ -1,6 +1,6 @@
 # What's in this branch?
 
-...
+This branch collates the outputs of the contributions to the Annex 37 Sub-task A work packet, and is used to perform the combined analyses presented in the report. It contains implementations of the prediction/forecasting methods investigated (found in the `models` directory), and scripts to assess and compare their performance (`assess_forecasts.py` & `evaluate.py`).
 
 For information on the the setup of the task, see the `README` on the `main` branch.
 
@@ -8,7 +8,7 @@ For information on the the setup of the task, see the `README` on the `main` bra
 
 # EECi's approach
 
-... what's everyone doing? ...
+The following table outlines the research questions that the members of [EECi](https://eeci.github.io/home/) are investigating as part of the Annex 37 task, and the prediction methods that they are working with to do so.
 
 | Name                                  | Research Question                                                                                                                                                                                                                                                                                                                                                                                                         | Model/Method                                                                                                                                                                              | Directory                            | Progress                                                                                                       |
 | :------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ For information on the the setup of the task, see the `README` on the `main` bra
 
 ## Get in touch
 
-If you would like to find out more about the approaches we are taking, would like to get involved with the work items, or have any suggestions for research questions or methods, please either email us using the links above or fill in [this form](https://forms.gle/KCmPPjirVn6TRkQJ6){:target="_blank" rel="noopener"}.
+If you would like to find out more about the approaches we are taking, would like to get involved with the work items, or have any suggestions for research questions or methods, please either email us using the links above or fill in [this form](https://forms.gle/KCmPPjirVn6TRkQJ6).
 
 <br>
 
