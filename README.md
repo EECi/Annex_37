@@ -170,6 +170,12 @@ len(sublist) == 28 for sublist in observations # observations values as defined 
 
 <br>
 
+## Research Direction & Working Results
+
+For up-to-date information on the research questions and modelling approaches being explored, please see the [`EECi` branch](https://github.com/EECi/Annex_37/tree/EECi).
+
+<br>
+
 ## Additional Documentation
 
 [Annex 37 Sub-task A presentation (Feb 16th 2023) slides](https://docs.google.com/presentation/d/1bR0BVOM6U2C5XhC6FKe8YhmrMTmw-Vnx/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
