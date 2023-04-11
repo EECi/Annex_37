@@ -23,7 +23,7 @@ For information on the the setup of the task, see the `README` on the `main` bra
 
 ## Get in touch
 
-If you would like to find out more about the approaches we are taking, would like to get involved with the work items, or have any suggestions for research questions or methods, please either email us using the links above or fill in [this form](https://forms.gle/KCmPPjirVn6TRkQJ6).
+If you would like to find out more about the approaches we are taking, would like to get involved with the work items, or have any suggestions for research questions or methods, please either email us using the links above or fill in <a href="https://forms.gle/KCmPPjirVn6TRkQJ6" target="_blank">this form</a>.
 
 <br>
 
