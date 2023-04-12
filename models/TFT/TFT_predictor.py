@@ -89,22 +89,7 @@ class TFT_Predictor():
         else:
             raise ValueError("`load` argument must be: 'group', 'indiv', or False")
 
-
-        # Perform prediction setup.
-        # ====================================================================
-        # define indices of variables in observations
-        self.load_obs_index = 20
-        self.solar_obs_index = 21
-        self.pricing_obs_index = 24
-        self.carbon_obs_index = 19
-
-        # initialise observations buffer
-        self.buffer = {
-            'load': [],
-            'solar': [],
-            'pricing': [],
-            'carbon': []
-        }
+        pl.seed_everything(42) # seed pytorch_lightning for reproducibility
 
 
     def load(self) -> None:
@@ -133,6 +118,12 @@ class TFT_Predictor():
 
         return TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
+    def reformat_df(self,df,ts_name,tv_cats):
+        df = df.rename_axis(self.time_id_col_name).reset_index() # create column of indices to pass as time_idx to TimeSeriesDataSet - we have no missing values
+        df[self.ts_id_col_name] = ts_name # create column with ID of timeseries (constant as only single timeseries)
+        for col in tv_cats:
+            df[col] = df[col].astype(str) # convert to strs to use as categoric covariates
+        return df
 
     def format_CityLearn_datasets(
         self,
@@ -149,45 +140,39 @@ class TFT_Predictor():
 
         building_fname_pattern = 'UCam_Building*.csv'
 
-        if (model_type in ['load','solar']) and not building_index:
-            raise ValueError(f"Must supply `building_ID` to construct {model_type} dataset from CityLearn data.")
+        if (model_type in ['load','solar']) and (building_index == None):
+            raise ValueError(f"Must supply `building_index` to construct {model_type} dataset from CityLearn data.")
 
         # Specify column name variables.
-        time_id_col_name = 'time_idx'
-        load_col_name = 'Equipment Electric Power [kWh]'
-        temp_col_name = 'Outdoor Drybulb Temperature [C]'
-        solar_col_name = 'Solar Generation Power [kW]'
-        dif_irad_col_name = 'Diffuse Solar Radiation [W/m2]'
-        dir_irad_col_name = 'Direct Solar Radiation [W/m2]'
-        pricing_col_name = 'Electricity Pricing [£]'
-        carbon_col_name = 'Carbon Intensity [kg_CO2/kWh]'
+        self.time_id_col_name = 'time_idx'
+        self.ts_id_col_name = 'ts_id'
+        self.load_col_name = 'Equipment Electric Power [kWh]'
+        self.temp_col_name = 'Outdoor Drybulb Temperature [C]'
+        self.solar_col_name = 'Solar Generation Power [kW]'
+        self.dif_irad_col_name = 'Diffuse Solar Radiation [W/m2]'
+        self.dir_irad_col_name = 'Direct Solar Radiation [W/m2]'
+        self.pricing_col_name = 'Electricity Pricing [£]'
+        self.carbon_col_name = 'Carbon Intensity [kg_CO2/kWh]'
 
         # Set default kwargs.
         if model_type == 'load':
-            target = load_col_name
+            target = self.load_col_name
             ts_name = 'l'
-            time_varying_unknown_reals = [load_col_name,temp_col_name]
+            time_varying_unknown_reals = [self.load_col_name,self.temp_col_name]
         elif model_type == 'solar':
-            target = solar_col_name
+            target = self.solar_col_name
             ts_name = 's'
-            time_varying_unknown_reals = [solar_col_name,dif_irad_col_name,dir_irad_col_name]
+            time_varying_unknown_reals = [self.solar_col_name,self.dif_irad_col_name,self.dir_irad_col_name]
         elif model_type == 'pricing':
-            target = pricing_col_name
+            target = self.pricing_col_name
             ts_name = 'p'
-            time_varying_unknown_reals = [pricing_col_name]
+            time_varying_unknown_reals = [self.pricing_col_name]
         elif model_type == 'carbon':
-            target = carbon_col_name
+            target = self.carbon_col_name
             ts_name = 'c'
-            time_varying_unknown_reals = [carbon_col_name]
+            time_varying_unknown_reals = [self.carbon_col_name]
 
-        time_varying_known_categoricals = ['Month','Hour','Day Type','Daylight Savings Status']
-
-        def reformat_df(df,ts_name,tv_cats):
-            df = df.rename_axis('time_idx').reset_index() # create column of indices to pass as time_idx to TimeSeriesDataSet - we have no missing values
-            df['ts_id'] = ts_name # create column with ID of timeseries (constant as only single timeseries)
-            for col in tv_cats:
-                df[col] = df[col].astype(str) # convert to strs to use as categoric covariates
-            return df
+        self.time_varying_known_categoricals = ['Month','Hour','Day Type','Daylight Savings Status']
 
         ts_datasets = []
 
@@ -197,35 +182,35 @@ class TFT_Predictor():
             env = CityLearnEnv(os.path.join(dirpath,'schema.json'))
             # construct base dataframe with time info (known categoricals)
             first_building_file_path = glob.glob(os.path.join(dirpath,building_fname_pattern))[0]
-            data_df = pd.read_csv(first_building_file_path,usecols=time_varying_known_categoricals)
-            data_df = reformat_df(data_df, ts_name, time_varying_known_categoricals)
+            data_df = pd.read_csv(first_building_file_path,usecols=self.time_varying_known_categoricals)
+            data_df = self.reformat_df(data_df, ts_name, self.time_varying_known_categoricals)
 
             # add type specific data to df, taking data from environment
             if model_type == 'load':
-                data_df[load_col_name] = env.buildings[building_index].energy_simulation.non_shiftable_load
-                data_df[temp_col_name] = env.buildings[building_index].weather.outdoor_dry_bulb_temperature
+                data_df[self.load_col_name] = env.buildings[building_index].energy_simulation.non_shiftable_load
+                data_df[self.temp_col_name] = env.buildings[building_index].weather.outdoor_dry_bulb_temperature
             elif model_type == 'solar':
-                data_df[solar_col_name] = env.buildings[building_index].energy_simulation.solar_generation
-                data_df[dif_irad_col_name] = env.buildings[building_index].weather.diffuse_solar_irradiance
-                data_df[dir_irad_col_name] = env.buildings[building_index].weather.direct_solar_irradiance
+                data_df[self.solar_col_name] = env.buildings[building_index].energy_simulation.solar_generation
+                data_df[self.dif_irad_col_name] = env.buildings[building_index].weather.diffuse_solar_irradiance
+                data_df[self.dir_irad_col_name] = env.buildings[building_index].weather.direct_solar_irradiance
             elif model_type == 'pricing':
-                data_df[pricing_col_name] = env.buildings[0].pricing.electricity_pricing
+                data_df[self.pricing_col_name] = env.buildings[0].pricing.electricity_pricing
             elif model_type == 'carbon':
-                data_df[carbon_col_name] = env.buildings[0].carbon_intensity.carbon_intensity
+                data_df[self.carbon_col_name] = env.buildings[0].carbon_intensity.carbon_intensity
 
             if i == 0:
                 timeseries_dataset = TimeSeriesDataSet(
                     data_df,
-                    time_idx=time_id_col_name,  # column name of time of observation
+                    time_idx=self.time_id_col_name,  # column name of time of observation
                     target=target,  # column name of target to predict
-                    group_ids=['ts_id'],  # column name(s) for timeseries IDs (static as only 1 timeseries used)
+                    group_ids=[self.ts_id_col_name],  # column name(s) for timeseries IDs (static as only 1 timeseries used)
                     max_encoder_length=max_encoder_length,  # how much history to use
                     max_prediction_length=max_prediction_length,  # how far to predict into future
                     # covariates static for a timeseries ID - ignore for the moment
                     #static_categoricals=[ ... ],
                     #static_reals=[ ... ],
                     # covariates known and unknown in the future to inform prediction
-                    time_varying_known_categoricals=time_varying_known_categoricals,
+                    time_varying_known_categoricals=self.time_varying_known_categoricals,
                     #time_varying_known_reals=[ ... ],
                     #time_varying_unknown_categoricals=[ ... ],
                     time_varying_unknown_reals=time_varying_unknown_reals
@@ -246,7 +231,7 @@ class TFT_Predictor():
 
         model_path = os.path.join(self.model_group_path,model_name)
 
-        if os.path.exists:
+        if os.path.exists(model_path):
             warnings.warn(f"Warning: A logs directory already exists for the model name `{model_name}`. By continuing you will overwrite this model.")
             if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','Y']:
                 print("Aborting model creation.")
@@ -254,16 +239,17 @@ class TFT_Predictor():
 
         # Set default kwargs.
         # architecture hyperparameters
-        if not kwargs['hidden_size']: kwargs['hidden_size'] = 48,
-        if not kwargs['attention_head_size']: kwargs['attention_head_size'] = 4,
-        if not kwargs['dropout']: kwargs['dropout'] = 0.1,
-        if not kwargs['hidden_continuous_size']: kwargs['hidden_continuous_size'] = 16,
+        if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 48
+        if 'attention_head_size' not in kwargs.keys(): kwargs['attention_head_size'] = 4
+        if 'dropout' not in kwargs.keys(): kwargs['dropout'] = 0.1
+        if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
         # loss metric to optimize
-        if not kwargs['loss']: kwargs['loss'] = QuantileLoss(),
+        if 'loss' not in kwargs.keys(): kwargs['loss'] = QuantileLoss()
         # set optimizer
-        if not kwargs['optimizer']: kwargs['optimizer'] = 'adam',
+        if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'adam'
         # optimizer parameters
-        if not kwargs['reduce_on_plateau_patience']: kwargs['reduce_on_plateau_patience'] = 5
+        if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
+        print(kwargs)
 
         # initialise TFT model from train_dataset specification
         tft = TemporalFusionTransformer.from_dataset(train_dataset,**kwargs)
@@ -281,15 +267,15 @@ class TFT_Predictor():
         return tft
 
 
-    def train(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, val_dataset: TimeSeriesDataSet, **kwargs) -> None:
+    def train_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, val_dataset: TimeSeriesDataSet, **kwargs) -> None:
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
         assert model_name in self.model_names[model_type], f"Model {model_name} of type {model_type} not loaded into predictor."
 
         # continue training is checkpoint file available
         load_path_file = 'best_model.json'
-        if os.path.exists(os.path.join(self.model_group_path,model_name,load_path_file)):
-            json_path = os.path.join(self.model_group_path,model_name,load_path_file)
+        json_path = os.path.join(self.model_group_path,model_name,load_path_file)
+        if os.path.exists(json_path):
             with open(json_path,'r') as json_file:
                 best_model_chkpt = json.load(json_file)['rel_path']
             best_checkpoint_path = os.path.join(self.model_group_path,model_name,*best_model_chkpt)
@@ -346,5 +332,104 @@ class TFT_Predictor():
             json.dump(best_model_path_dict, json_file)
 
 
-    def compute_forecast(self, observations):
-        pass
+    def initialise_forecasting(self, num_buildings: int, tau: int):
+
+        # define indices of variables in observations
+        self.load_obs_index = 20
+        self.solar_obs_index = 21
+        self.pricing_obs_index = 24
+        self.carbon_obs_index = 19
+
+        # initialise observations buffer
+        self.buffer = {
+            'load': [[]*num_buildings],
+            'solar': [[]*num_buildings],
+            'pricing': [],
+            'carbon': []
+        }
+
+        # check prediction models can provide specified tau & get max encoder length
+        max_encoder_length = 0
+        max_prediction_length = 0
+        for model_type in self.model_types:
+            for model_name in self.models[model_type].keys():
+                assert self.models[model_type][model_name].max_prediction_length >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large."
+                if self.models[model_type][model_name].hparams.max_encoder_length > max_encoder_length:
+                    max_encoder_length = self.models[model_type][model_name].hparams.max_encoder_length
+                if self.models[model_type][model_name].max_prediction_length > max_prediction_length:
+                    max_prediction_length = self.models[model_type][model_name].max_prediction_length
+        self.tau = tau
+        self.max_encoder_length = max_encoder_length
+        self.max_prediction_length = max_prediction_length
+        # TODO: go I just give up and specify L & T for all models explicitly? Set them as attributes for easy access
+        # but if I load a model I still need to be able to find L & T
+
+
+    def compute_forecast(self, observations, env: CityLearnEnv, t: int):
+
+        assert all([len(self.models[key])>0 for key in self.models.keys()])
+        assert len(self.models['load']) == len(self.models['solar']) == np.array(observations).shape[0], "You must provide the same number of `load` and `solar` models as buildings being predicted for."
+
+        # Update observation buffers.
+        for model_type,obs_id in zip(self.model_types,[self.load_obs_index,self.solar_obs_index,self.pricing_obs_index,self.carbon_obs_index]):
+            if model_type in ['load','solar']:
+                for j,val in np.array(observations)[:, obs_id]:
+                    self.buffer[model_type][j].append(val)
+            else:
+                self.buffer[model_type].append(np.array(observations)[0, obs_id])
+
+
+        # Perform prediction.
+        if (len(self.buffer['pricing']) < self.max_encoder_length) or (env.time_steps - t < self.max_prediction_length):
+            return None # opt out of prediction if buffer not yet full
+        else:
+            # construct base df with time & past weather info
+            months = env.buildings[0].energy_simulation.month[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
+            hours = env.buildings[0].energy_simulation.hour[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
+            day_types = env.buildings[0].energy_simulation.day_type[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
+            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
+            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[t-self.max_encoder_length+1:t+1]
+            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[t-self.max_encoder_length+1:t+1]
+            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[t-self.max_encoder_length+1:t+1]
+
+            base_df = pd.DataFrame({
+                'Month': months,
+                'Hour': hours,
+                'Day Type': day_types,
+                'Daylight Savings Status': day_save_statuses,
+                self.temp_col_name: np.append(past_temps,np.zeros(self.max_prediction_length)),
+                self.dif_irad_col_name: np.append(past_dif_irads,np.zeros(self.max_prediction_length)),
+                self.dir_irad_col_name: np.append(past_dir_irads,np.zeros(self.max_prediction_length))
+            })
+            base_df = self.reformat_df(base_df,'pred',self.time_varying_known_categoricals)
+
+            # perform load forecasting
+            load_forecasts = []
+            for j,model in enumerate(self.models['load']):
+
+                # construct data df 
+                data_df = base_df.copy()
+                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-model.max_encoder_length:],np.zeros(model.max_prediction_length))
+
+                # TODO: can I simply take in a dataframe for prediction or do I need to convert it to a dataloader or TimeSeriesDataSet?
+
+                # perform prediction
+                load_prediction = model.predict(data_df, mode='prediction')
+
+                # save prediction in structure
+                load_forecasts.append(load_prediction)
+
+            if model_type == 'solar':
+                target = self.solar_col_name
+                ts_name = 's'
+                time_varying_unknown_reals = [self.solar_col_name,self.dif_irad_col_name,self.dir_irad_col_name]
+            elif model_type == 'pricing':
+                target = self.pricing_col_name
+                ts_name = 'p'
+                time_varying_unknown_reals = [self.pricing_col_name]
+            elif model_type == 'carbon':
+                target = self.carbon_col_name
+                ts_name = 'c'
+                time_varying_unknown_reals = [self.carbon_col_name]
+
+        return np.array(load_forecasts), ... # return structured predictions
