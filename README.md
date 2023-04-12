@@ -92,6 +92,12 @@ Participants are free to implement additional methods for their `Predictor` clas
 
 For training forecasting strategies, the training dataset is directly available in the `data` directory.
 
+## Forecast Assessment
+
+The quality of forecasting achieved by the implemented prediction method (w.r.t. its match to true/ground-truth values) can be evaluated by running `assess_forecasts.py`, with suitable settings specified within the file.
+
+Please edit the file to assess your forecasts as desired.
+
 
 ## Evaluation
 
@@ -164,9 +170,17 @@ len(sublist) == 28 for sublist in observations # observations values as defined 
 
 <br>
 
+## Research Direction & Working Results
+
+For up-to-date information on the research questions and modelling approaches being explored, please see the [`EECi` branch](https://github.com/EECi/Annex_37/tree/EECi).
+
+<br>
+
 ## Additional Documentation
 
 [Annex 37 Sub-task A presentation (Feb 16th 2023) slides](https://docs.google.com/presentation/d/1bR0BVOM6U2C5XhC6FKe8YhmrMTmw-Vnx/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+[Annex 37 Sub-task A update presentation (Apr 11th 2023) slides](https://docs.google.com/presentation/d/1M5aQ369PFi6MjMJxUh9ztM5OaOHgmadQ/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
 
 
 ## Further information

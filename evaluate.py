@@ -132,6 +132,7 @@ def evaluate(schema_path,
     print(f"Emissions Cost: {round(emissions_cost,5)}")
     print(f"Grid Cost: {round(grid_cost,5)}")
     print(f"Overall Cost: {round(overall_cost,5)}")
+    print(f"Total time taken for forecasting: {round(forecast_time_elapsed,1)}s")
     print(f"Total time taken by LP solver: {round(lp_solver_time_elapsed,1)}s")
 
     results = {
