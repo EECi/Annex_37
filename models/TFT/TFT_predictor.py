@@ -2,6 +2,7 @@
 
 import os
 import glob
+import shutil
 import json
 from typing import Any, List, Dict, Union
 import warnings
@@ -20,20 +21,25 @@ from pytorch_lightning.tuner.tuning import Tuner
 from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer, QuantileLoss
 
 
+
 class TFT_Predictor():
 
     def __init__(self,
-        model_names: Union[List, Dict] = None,
         model_group_name = 'default',
+        L: int = 72,
+        T: int = 48,
+        model_names: Union[List, Dict] = None,
         load: Union[str, bool] = 'group'
         ) -> None:
 
         self.model_types = ['load','solar','pricing','carbon']
         self.model_group_name = model_group_name
-        self.model_group_path = os.path.join('models','TFT','resources','lightning_logs',model_group_name)
+        self.model_group_path = os.path.join('models','TFT','resources','model_logs',model_group_name)
 
         if load in ['group','indiv']:
             assert os.path.exists(self.model_group_path), "Cannot load model group as logs do not exist!"
+        else:
+            assert all([(type(val) == int) and (val > 0) for val in [L,T]])
 
         # Perform model loading/construction.
         # ====================================================================
@@ -59,11 +65,14 @@ class TFT_Predictor():
             elif load == 'group': # get model names for given `model_group_name`
                 for model_type in self.model_types:
                     assert os.path.exists(os.path.join(self.model_group_path),model_type), f"`{model_type}` model logs sub-dir does not exist."
+                for model_type in ['pricing','carbon']:
+                    if len(list(os.scandir(os.path.join(self.model_group_path,'solar')))) > 1:
+                        warnings.warn(f"Warning: More than 1 {model_type} model available. 1st selected in group load.")
                 model_names = {
-                    'load': [f.path for f in os.scandir(os.path.join(self.model_group_path,'load')) if f.is_dir()],
-                    'solar': [f.path for f in os.scandir(os.path.join(self.model_group_path,'solar')) if f.is_dir()],
-                    'pricing': 'pricing',
-                    'carbon': 'carbon'
+                    'load': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'load')) if f.is_dir()],
+                    'solar': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'solar')) if f.is_dir()],
+                    'pricing': os.path.split(list(os.scandir(os.path.join(self.model_group_path,'pricing')))[0])[-1],
+                    'carbon': os.path.split(list(os.scandir(os.path.join(self.model_group_path,'carbon')))[0])[-1]
                 }
             else:
                 raise ValueError("Cannot use load option `indiv` if model names are not specified.")
@@ -73,8 +82,16 @@ class TFT_Predictor():
         self.model_names = model_names
 
         # Load or initialise models.
+        group_mparams_path = os.path.join(self.model_group_path,'model_group_params.json')
         if load in ['group','indiv']:
             self.load()
+
+            assert os.path.exists(group_mparams_path)
+            with open(group_mparams_path,'r') as json_file:
+                group_mparams = json.load(json_file)['model_group_parameters']
+            self.L = group_mparams['L']
+            self.T = group_mparams['T']
+
         elif not load: # initialise models dict to be filled later
             self.models = {
                 'load': {},
@@ -82,10 +99,18 @@ class TFT_Predictor():
                 'pricing': {},
                 'carbon': {}
             }
+
             if os.path.exists(self.model_group_path):
                 warnings.warn(f"Warning: A log directory for this model group name ({model_group_name}) already exists but you are not loading it.")
             else:
                 os.makedirs(os.path.realpath(self.model_group_path))
+            
+            if os.path.exists(group_mparams_path): warnings.warn("Warning: Model group metadata overwritten.")
+            with open(group_mparams_path,'w') as json_file:
+                json.dump({'model_group_parameters':{'L':L,'T':T}}, json_file)
+            self.L = L
+            self.T = T
+
         else:
             raise ValueError("`load` argument must be: 'group', 'indiv', or False")
 
@@ -95,11 +120,11 @@ class TFT_Predictor():
     def load(self) -> None:
 
         self.models = {
-            'load': {model_name: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_name)) for model_name in self.model_names['load']},
-            'solar': {model_name: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_name)) for model_name in self.model_names['solar']},
-            'pricing': {self.model_names['pricing']: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,self.model_names['pricing']))},
-            'carbon': {self.model_names['carbon']: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,self.model_names['carbon']))}
+            model_type: {model_name: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,model_name)) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
         }
+        self.models.update({
+            model_type: {self.model_names[model_type]: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
+        })
         # Note: order of models in dictionary defines models used for prediction at each index in load and solar arrays
 
 
@@ -130,18 +155,16 @@ class TFT_Predictor():
         CityLearn_dataset_dirpaths,
         model_type,
         building_index: int = None,
-        max_encoder_length=72,
-        max_prediction_length=48
         ) -> List[TimeSeriesDataSet]:
         # format appropriate TimeSeriesDataSet from CityLearn dataset dir(s)
         # use construction from_dataset for datasets after first
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
 
-        building_fname_pattern = 'UCam_Building*.csv'
-
         if (model_type in ['load','solar']) and (building_index == None):
             raise ValueError(f"Must supply `building_index` to construct {model_type} dataset from CityLearn data.")
+
+        building_fname_pattern = 'UCam_Building*.csv'
 
         # Specify column name variables.
         self.time_id_col_name = 'time_idx'
@@ -204,8 +227,8 @@ class TFT_Predictor():
                     time_idx=self.time_id_col_name,  # column name of time of observation
                     target=target,  # column name of target to predict
                     group_ids=[self.ts_id_col_name],  # column name(s) for timeseries IDs (static as only 1 timeseries used)
-                    max_encoder_length=max_encoder_length,  # how much history to use
-                    max_prediction_length=max_prediction_length,  # how far to predict into future
+                    max_encoder_length=self.L,  # how much history to use
+                    max_prediction_length=self.T,  # how far to predict into future
                     # covariates static for a timeseries ID - ignore for the moment
                     #static_categoricals=[ ... ],
                     #static_reals=[ ... ],
@@ -228,14 +251,18 @@ class TFT_Predictor():
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
         assert type(train_dataset) == TimeSeriesDataSet, "`train_dataset` must be a pytorch_forecasting.TimeSeriesDataSet object."
+        assert train_dataset.max_encoder_length == self.L, f"`max_encoder_length` of input TimeSeriesDataSet {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
+        assert train_dataset.max_prediction_length == self.T, f"`max_prediction_length` of input TimeSeriesDataSet {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
 
-        model_path = os.path.join(self.model_group_path,model_name)
+        model_path = os.path.join(self.model_group_path,model_type,model_name)
 
         if os.path.exists(model_path):
             warnings.warn(f"Warning: A logs directory already exists for the model name `{model_name}`. By continuing you will overwrite this model.")
-            if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','Y']:
+            if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
                 print("Aborting model creation.")
                 return
+            else:
+                shutil.rmtree(model_path)
 
         # Set default kwargs.
         # architecture hyperparameters
@@ -249,7 +276,6 @@ class TFT_Predictor():
         if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'adam'
         # optimizer parameters
         if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
-        print(kwargs)
 
         # initialise TFT model from train_dataset specification
         tft = TemporalFusionTransformer.from_dataset(train_dataset,**kwargs)
@@ -272,13 +298,18 @@ class TFT_Predictor():
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
         assert model_name in self.model_names[model_type], f"Model {model_name} of type {model_type} not loaded into predictor."
 
+        assert train_dataset.max_encoder_length == self.L, f"`max_encoder_length` of training dataset (TimeSeriesDataSet) {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
+        assert train_dataset.max_prediction_length == self.L, f"`max_prediction_length` of training dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
+        assert val_dataset.max_encoder_length == self.L, f"`max_encoder_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
+        assert val_dataset.max_prediction_length == self.L, f"`max_prediction_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
+
         # continue training is checkpoint file available
         load_path_file = 'best_model.json'
-        json_path = os.path.join(self.model_group_path,model_name,load_path_file)
+        json_path = os.path.join(self.model_group_path,model_type,model_name,load_path_file)
         if os.path.exists(json_path):
             with open(json_path,'r') as json_file:
                 best_model_chkpt = json.load(json_file)['rel_path']
-            best_checkpoint_path = os.path.join(self.model_group_path,model_name,*best_model_chkpt)
+            best_checkpoint_path = os.path.join(self.model_group_path,model_type,model_name,*best_model_chkpt)
         else:
             best_checkpoint_path = None
 
@@ -348,21 +379,9 @@ class TFT_Predictor():
             'carbon': []
         }
 
-        # check prediction models can provide specified tau & get max encoder length
-        max_encoder_length = 0
-        max_prediction_length = 0
-        for model_type in self.model_types:
-            for model_name in self.models[model_type].keys():
-                assert self.models[model_type][model_name].max_prediction_length >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large."
-                if self.models[model_type][model_name].hparams.max_encoder_length > max_encoder_length:
-                    max_encoder_length = self.models[model_type][model_name].hparams.max_encoder_length
-                if self.models[model_type][model_name].max_prediction_length > max_prediction_length:
-                    max_prediction_length = self.models[model_type][model_name].max_prediction_length
+        # check prediction models can provide specified tau
+        assert self.T >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large (> {self.T})."
         self.tau = tau
-        self.max_encoder_length = max_encoder_length
-        self.max_prediction_length = max_prediction_length
-        # TODO: go I just give up and specify L & T for all models explicitly? Set them as attributes for easy access
-        # but if I load a model I still need to be able to find L & T
 
 
     def compute_forecast(self, observations, env: CityLearnEnv, t: int):
@@ -380,26 +399,26 @@ class TFT_Predictor():
 
 
         # Perform prediction.
-        if (len(self.buffer['pricing']) < self.max_encoder_length) or (env.time_steps - t < self.max_prediction_length):
+        if (len(self.buffer['pricing']) < self.L) or (env.time_steps - t < self.T):
             return None # opt out of prediction if buffer not yet full
         else:
             # construct base df with time & past weather info
-            months = env.buildings[0].energy_simulation.month[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
-            hours = env.buildings[0].energy_simulation.hour[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
-            day_types = env.buildings[0].energy_simulation.day_type[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
-            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[t-self.max_encoder_length+1:t+self.max_prediction_length+1]
-            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[t-self.max_encoder_length+1:t+1]
-            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[t-self.max_encoder_length+1:t+1]
-            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[t-self.max_encoder_length+1:t+1]
+            months = env.buildings[0].energy_simulation.month[t-self.L+1:t+self.T+1]
+            hours = env.buildings[0].energy_simulation.hour[t-self.L+1:t+self.T+1]
+            day_types = env.buildings[0].energy_simulation.day_type[t-self.L+1:t+self.T+1]
+            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[t-self.L+1:t+self.T+1]
+            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[t-self.L+1:t+1]
+            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[t-self.L+1:t+1]
+            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[t-self.L+1:t+1]
 
             base_df = pd.DataFrame({
                 'Month': months,
                 'Hour': hours,
                 'Day Type': day_types,
                 'Daylight Savings Status': day_save_statuses,
-                self.temp_col_name: np.append(past_temps,np.zeros(self.max_prediction_length)),
-                self.dif_irad_col_name: np.append(past_dif_irads,np.zeros(self.max_prediction_length)),
-                self.dir_irad_col_name: np.append(past_dir_irads,np.zeros(self.max_prediction_length))
+                self.temp_col_name: np.append(past_temps,np.zeros(self.T)),
+                self.dif_irad_col_name: np.append(past_dif_irads,np.zeros(self.T)),
+                self.dir_irad_col_name: np.append(past_dir_irads,np.zeros(self.T))
             })
             base_df = self.reformat_df(base_df,'pred',self.time_varying_known_categoricals)
 
