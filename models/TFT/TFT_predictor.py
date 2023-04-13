@@ -318,7 +318,7 @@ class TFT_Predictor():
 
         # Convert datasets to dataloaders for training.
         batch_size = 128
-        n_workers = 4
+        n_workers = int(os.cpu_count()/2)
         train_dataloader = train_dataset.to_dataloader(train=True, batch_size=batch_size, num_workers=n_workers)
         val_dataloader = val_dataset.to_dataloader(train=False, batch_size=batch_size, num_workers=n_workers)
 
@@ -330,7 +330,7 @@ class TFT_Predictor():
         tb_logger = TensorBoardLogger(save_dir=self.model_group_path, name=model_name)
         trainer = pl.Trainer(
             deterministic=True,
-            accelerator='cpu',
+            accelerator='auto',
             max_epochs=100,
             enable_model_summary=True,
             gradient_clip_val=0.1,
