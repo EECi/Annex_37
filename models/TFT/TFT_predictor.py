@@ -82,6 +82,8 @@ class TFT_Predictor():
         self.model_names = model_names
 
         # Load or initialise models.
+        # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays (i.e. for eac building)
+
         group_mparams_path = os.path.join(self.model_group_path,'model_group_params.json')
         if load in ['group','indiv']:
             self.load()
@@ -119,13 +121,13 @@ class TFT_Predictor():
 
     def load(self) -> None:
 
+        # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays
         self.models = {
             model_type: {model_name: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,model_name)) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
         }
         self.models.update({
             model_type: {self.model_names[model_type]: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
         })
-        # Note: order of models in dictionary defines models used for prediction at each index in load and solar arrays
 
 
     def load_TFT_from_model_dir_path(self, model_path) -> TemporalFusionTransformer:
@@ -299,9 +301,9 @@ class TFT_Predictor():
         assert model_name in self.model_names[model_type], f"Model {model_name} of type {model_type} not loaded into predictor."
 
         assert train_dataset.max_encoder_length == self.L, f"`max_encoder_length` of training dataset (TimeSeriesDataSet) {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
-        assert train_dataset.max_prediction_length == self.L, f"`max_prediction_length` of training dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
+        assert train_dataset.max_prediction_length == self.T, f"`max_prediction_length` of training dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
         assert val_dataset.max_encoder_length == self.L, f"`max_encoder_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
-        assert val_dataset.max_prediction_length == self.L, f"`max_prediction_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
+        assert val_dataset.max_prediction_length == self.T, f"`max_prediction_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
 
         # continue training is checkpoint file available
         load_path_file = 'best_model.json'
