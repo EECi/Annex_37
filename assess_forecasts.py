@@ -217,7 +217,7 @@ if __name__ == '__main__':
 
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True)
+    predictor = DMSPredictor(expt_name=model_name, load=True)
     # ==================================================================================================================
 
     # assess forecasts

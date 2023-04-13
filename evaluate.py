@@ -7,6 +7,7 @@ with specified dataset to evaluate predictor performance.
 """
 
 import os
+import csv
 import time
 import numpy as np
 import cvxpy as cp
@@ -127,6 +128,7 @@ def evaluate(predictor,
     cost_contributions = np.array([price_cost, emissions_cost, grid_cost])
     cost_weights = np.array([objective_dict[key] for key in ['price', 'carbon', 'ramping']])    # enforce ordering
     overall_cost = cost_contributions[~np.isnan(cost_contributions)] @ cost_weights[~np.isnan(cost_contributions)]
+    overall_cost /= 3   # mean over all three contributions
 
     print("=========================Results=========================")
     print(f"Price Cost: {round(price_cost, 5)}")
@@ -156,9 +158,15 @@ if __name__ == '__main__':
 
     # Set parameters and instantiate predictor
     # ==================================================================================================================
+    # Parameters
+    save = False
+    model_name = 'linear_L168_T48'
+    results_file = 'evaluate_results.csv'
+    results_file = os.path.join('outputs', results_file)
+
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True)
+    predictor = DMSPredictor(expt_name=model_name, load=True)
 
     # Evaluation parameters
     objective_dict = {'price': True, 'carbon': True, 'ramping': True}
@@ -172,3 +180,15 @@ if __name__ == '__main__':
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
+
+    if save:
+        header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
+        out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
+
+        if not os.path.exists(results_file):
+            with open(results_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(out)
