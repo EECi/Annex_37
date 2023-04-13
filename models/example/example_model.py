@@ -62,7 +62,7 @@ class ExamplePredictor(BasePredictorModel):
             observation (List[List]): observation data for current time instance, as
                 specified in CityLearn documentation.
                 The observation is a list of observations for each building (sub-list),
-                where the sub-lists contain values as specified in the ReadMe.md
+                where the sub-lists contain values as specified in the main/README.md
 
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
