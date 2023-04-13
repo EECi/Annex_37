@@ -271,13 +271,13 @@ class TFT_Predictor():
         if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 48
         if 'attention_head_size' not in kwargs.keys(): kwargs['attention_head_size'] = 4
         if 'dropout' not in kwargs.keys(): kwargs['dropout'] = 0.1
-        if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
+        #if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
         # loss metric to optimize
         if 'loss' not in kwargs.keys(): kwargs['loss'] = QuantileLoss()
         # set optimizer
         if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'adam'
         # optimizer parameters
-        if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
+        if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 2
 
         # initialise TFT model from train_dataset specification
         tft = TemporalFusionTransformer.from_dataset(train_dataset,**kwargs)
@@ -305,13 +305,15 @@ class TFT_Predictor():
         assert val_dataset.max_encoder_length == self.L, f"`max_encoder_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_encoder_length} does not match encoder window of model group {self.L} (L)."
         assert val_dataset.max_prediction_length == self.T, f"`max_prediction_length` of validation dataset (TimeSeriesDataSet) {train_dataset.max_prediction_length} does not match planning horizon of model group {self.T} (T)."
 
+        model_path = os.path.join(self.model_group_path,model_type,model_name)
+
         # continue training is checkpoint file available
         load_path_file = 'best_model.json'
-        json_path = os.path.join(self.model_group_path,model_type,model_name,load_path_file)
+        json_path = os.path.join(model_path,load_path_file)
         if os.path.exists(json_path):
             with open(json_path,'r') as json_file:
                 best_model_chkpt = json.load(json_file)['rel_path']
-            best_checkpoint_path = os.path.join(self.model_group_path,model_type,model_name,*best_model_chkpt)
+            best_checkpoint_path = os.path.join(model_path,*best_model_chkpt)
         else:
             best_checkpoint_path = None
 
@@ -320,7 +322,7 @@ class TFT_Predictor():
 
         # Convert datasets to dataloaders for training.
         batch_size = 128
-        n_workers = int(os.cpu_count()/2)
+        n_workers = 4 if os.cpu_count() >= 8 else int(os.cpu_count()/2)
         train_dataloader = train_dataset.to_dataloader(train=True, batch_size=batch_size, num_workers=n_workers)
         val_dataloader = val_dataset.to_dataloader(train=False, batch_size=batch_size, num_workers=n_workers)
 
@@ -329,14 +331,19 @@ class TFT_Predictor():
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-6, patience=5, verbose=False, mode="min")
         lr_logger = LearningRateMonitor()
         checkpoint_callback = ModelCheckpoint(monitor="val_loss", save_top_k=1, mode="min")
-        tb_logger = TensorBoardLogger(save_dir=self.model_group_path, name=model_name)
+        tb_logger = TensorBoardLogger(save_dir=model_path,name='')
         trainer = pl.Trainer(
-            deterministic=True,
+            #deterministic=True, # remove stochasticity for reproducibility
+            # set acceleration & hardware settings
             accelerator='auto',
+            devices="auto",
+            strategy="auto",
+            # set training parameters
             max_epochs=100,
-            enable_model_summary=True,
+            enable_model_summary=False, # use True to see model structure & params
             gradient_clip_val=0.1,
             limit_train_batches=500,  # batches per epoch
+            # set logging & callbacks
             callbacks=[lr_logger, early_stop_callback, checkpoint_callback],
             logger=tb_logger
         )
@@ -388,7 +395,7 @@ class TFT_Predictor():
 
     def compute_forecast(self, observations, env: CityLearnEnv, t: int):
 
-        assert all([len(self.models[key])>0 for key in self.models.keys()])
+        assert all([len(self.models[key])>0 for key in self.models.keys()]), "You must load models for all variables to perform prediction."
         assert len(self.models['load']) == len(self.models['solar']) == np.array(observations).shape[0], "You must provide the same number of `load` and `solar` models as buildings being predicted for."
 
         # Update observation buffers.
