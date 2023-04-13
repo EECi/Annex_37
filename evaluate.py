@@ -126,9 +126,9 @@ def evaluate(predictor,
 
     grid_cost = np.mean([metrics.iloc[0].value, metrics.iloc[6].value]) if objective_dict['ramping'] else np.NaN
     cost_contributions = np.array([price_cost, emissions_cost, grid_cost])
-    cost_weights = np.array([objective_dict[key] for key in ['price', 'carbon', 'ramping']])    # enforce ordering
+    cost_weights = [objective_dict[key] for key in ['price', 'carbon', 'ramping']]    # enforce ordering
+    if True in cost_weights: cost_weights = np.array([1/cost_weights.count(True) if item == True else 0 for item in cost_weights])
     overall_cost = cost_contributions[~np.isnan(cost_contributions)] @ cost_weights[~np.isnan(cost_contributions)]
-    overall_cost /= 3   # mean over all three contributions
 
     print("=========================Results=========================")
     print(f"Price Cost: {round(price_cost, 5)}")
