@@ -1,6 +1,6 @@
 import os
 import glob
-from predictor import Predictor
+from models.dms.predictor import Predictor
 
 
 L = 168

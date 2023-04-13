@@ -3,18 +3,23 @@
 
 ---
 
-## Running outside the module
-When running the predictor outside the module ie. when running `evaluate.py` or `assess_forecasts.py` set 
-`outside_module` to `True` as follows. The predictor will load the trained model specified by `expt_name` 
-(see [`train.py`](#trainpy-)).
+## Loading a pre-trained predictor
+
+This is done in `evaluate.py` and `assess_forecasts.py`. The predictor will load the trained model 
+specified by `expt_name` (see [`train.py`](#trainpy-)).
 
 ```python
 from models import DMSPredictor
-predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
+predictor = DMSPredictor(expt_name='linear_L168_T48', load=True)
 ```
 
-## Running inside the module 🏃‍♀️
-The following files are ran from inside the module. See the details for each file in the sections below.
+## Running files inside the module 🏃‍♀️
+The following files are provided inside the module, please run these from the root directory as a module, for example:
+```
+python -m models.dms.<filename>.py
+```
+
+More details on the each of the files can be found in later corresponding sections.
 
 - [`train.py`](#trainpy-): contains the code for training the forecaster
 

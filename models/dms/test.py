@@ -1,4 +1,4 @@
-from predictor import Predictor
+from models.dms.predictor import Predictor
 
 results_file = 'results.csv'
 expt_name = 'linear_L168_T48'

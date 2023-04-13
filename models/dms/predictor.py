@@ -37,7 +37,7 @@ torch.set_float32_matmul_precision('medium')
 
 class Predictor(BasePredictorModel):
     def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=144, T=48,
-                 expt_name='log_expt', results_file='results.csv', load=False, outside_module=False):
+                 expt_name='log_expt', results_file='results.csv', load=False):
         """Initialise Prediction object and perform setup.
 
         Args:
@@ -53,8 +53,6 @@ class Predictor(BasePredictorModel):
             expt_name (str): Name of the experiment. Used to create a directory to save experiment-related files.
             load (bool): Whether to load hyperparameters from a the directory provided by 'expt_name'. Set True for
                 training and False for testing.
-            outside_module (bool): Specifies that the predictor is running outside the dms module, for instance when
-                used in evaluate.py.
         """
 
         if mparam_dict is None:
@@ -68,9 +66,7 @@ class Predictor(BasePredictorModel):
         error_str = f'incorrect keys provided in mparam_dict, only the following is allowed: {valid_types}'
         assert all([key in valid_types for key in mparam_dict.keys()]), error_str
 
-        expt_dir = os.path.join('resources', expt_name)
-        if outside_module:
-            expt_dir = os.path.join('models', 'dms', expt_dir)
+        expt_dir = os.path.join('models', 'dms', 'resources', expt_name)
 
         if load:
             with open(os.path.join(expt_dir, 'mparam_dict.json'), 'r') as file:
@@ -89,7 +85,7 @@ class Predictor(BasePredictorModel):
         self.T = T
         self.L = L
         self.expt_name = expt_name
-        self.results_file = os.path.join('resources', results_file)
+        self.results_file = os.path.join('models', 'dms', 'resources', results_file)
 
         self.training_order = [f'load_{b}' for b in building_indices]
         self.training_order += [f'solar_{b}' for b in building_indices]
@@ -110,7 +106,7 @@ class Predictor(BasePredictorModel):
             for key in self.training_order:
                 # fill up buffer using validation set
                 building_index, dataset_type = self.key2bd(key)
-                val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate', outside_module)
+                val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate')
                 x, _ = val_dataset[-1]
                 self.buffer[key] = deque(x, maxlen=len(x))
 

@@ -8,6 +8,22 @@
 
 4. Provide any other information that would be helpful to users of the model
 
+## Loading a pre-trained predictor
+
+This is done in `evaluate.py` and `assess_forecasts.py`.
+
+```python
+from models import ExamplePredictor
+predictor = ExamplePredictor(N=6, tau=48)
+```
+
+## Running files inside the module
+The following files are provided inside the module, please run these from the root directory as a module, for example:
+```
+python -m models.example.example_test.py
+```
+
+
 ## Directory Structure
 
 Outline the structure of the directory and the files you have provided. E.g.,

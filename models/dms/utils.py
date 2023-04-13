@@ -92,21 +92,17 @@ class Data(Dataset):
         T (int): length of planning horizon (number of time instances into the future to forecast).
         dataset_type (str):The type of the dataset to use ('load', 'solar', 'price', or 'carbon').
         version (str): The version of the dataset to use ('train', 'valid' or 'test').
-        outside_module (bool): Specifies that the Dataset is used outside the dms module, for instance when
-            used in evaluate.py via the predictor.
     Example:
         data = Data(building_index=5, L=48, T=24, dataset_type='load', version='train')
     """
 
-    def __init__(self, building_index=5, L=48, T=24, dataset_type='load', version='train', outside_module=False):
+    def __init__(self, building_index=5, L=48, T=24, dataset_type='load', version='train'):
         super().__init__()
         self.dataset_type = dataset_type
         self.type2idx = {'load': 0, 'solar': 1, 'price': 2, 'carbon': 3}
         self.type_idx = self.type2idx[dataset_type]
 
         dataset_dir = os.path.join('data', 'example')
-        if not outside_module:
-            dataset_dir = os.path.join('..', '..', dataset_dir)
         building = pd.read_csv(os.path.join(dataset_dir, version, f'UCam_Building_{building_index}.csv'))
         load = building['Equipment Electric Power [kWh]']
         solar = building['Solar Generation [W/kW]']

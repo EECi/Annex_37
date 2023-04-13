@@ -158,7 +158,7 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
+    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True)
 
     # Evaluation parameters
     objective_dict = {'price': True, 'carbon': True, 'ramping': True}

@@ -210,15 +210,14 @@ if __name__ == '__main__':
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
-    save = True
-    plot = True
+    save = False
     model_name = 'linear_L168_T48'
     results_file = 'forecast_results.csv'
     results_file = os.path.join('outputs', results_file)
 
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
+    predictor = DMSPredictor(expt_name='linear_L168_T48', load=True)
     # ==================================================================================================================
 
     # assess forecasts
@@ -255,6 +254,3 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             writer.writerow(out)
 
-    # todo: visualise results
-    if plot:
-        pass

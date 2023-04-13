@@ -1,6 +1,5 @@
-from predictor import Predictor
+from models.dms.predictor import Predictor
 from models.dms.utils import IndividualPlotter
-
 
 building_index = 5
 dataset_type = 'load'

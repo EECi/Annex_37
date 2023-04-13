@@ -7,12 +7,6 @@ class BasePredictorModel(ABC):
     """Abstract class defining interfaces required by prediction
     model implementations."""
 
-    # todo: delete
-    # @abstractmethod
-    # def load(self):
-    #     """Method to load pre-trained model from save file."""
-    #     pass
-
     @abstractmethod
     def compute_forecast(self, observations):
         """Method to perform inference, generating predictions given

@@ -14,8 +14,7 @@ This class must have the following methods:
 You may wish to implement additional methods to make your model code neater.
 """
 
-from ..base_predictor_model import BasePredictorModel
-
+from models.base_predictor_model import BasePredictorModel
 import numpy as np
 
 
@@ -47,17 +46,14 @@ class ExamplePredictor(BasePredictorModel):
         self.buffer = {'key': []}
         # ====================================================================
 
-
         # dummy forecaster buffer - delete for your implementation
         # ====================================================================
         self.prev_vals = {'loads': None, 'pv_gens': None, 'price': None, 'carbon': None}
         # ====================================================================
 
-
     def load(self):
         """No loading required for trivial example model."""
         pass
-
 
     def compute_forecast(self, observations):
         """Compute forecasts given current observation.
@@ -83,7 +79,6 @@ class ExamplePredictor(BasePredictorModel):
         # insert your forecasting code here
         # ====================================================================
 
-
         # dummy forecaster for illustration - delete for your implementation
         # ====================================================================
         current_vals = {
@@ -92,7 +87,6 @@ class ExamplePredictor(BasePredictorModel):
             'pricing': np.array(observations)[0,24],
             'carbon': np.array(observations)[0,19]
         }
-
 
         if self.prev_vals['carbon'] is None:
             predicted_loads = np.repeat(current_vals['loads'].reshape(self.num_buildings,1),self.tau,axis=1)
@@ -114,9 +108,7 @@ class ExamplePredictor(BasePredictorModel):
 
             predicted_carbon = np.poly1d(np.polyfit([-1,0],[self.prev_vals['carbon'],current_vals['carbon']],deg=1))(predict_inds).clip(0.01)
 
-
         self.prev_vals = current_vals
         # ====================================================================
-
 
         return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon
