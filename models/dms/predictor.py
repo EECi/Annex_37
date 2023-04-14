@@ -36,8 +36,8 @@ torch.set_float32_matmul_precision('medium')
 
 
 class Predictor(BasePredictorModel):
-    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=144, T=48,
-                 expt_name='log_expt', results_file='results.csv', load=False):
+    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=168, T=48,
+                 expt_name='linear_L168_T48', results_file='results.csv', load=True):
         """Initialise Prediction object and perform setup.
 
         Args:
@@ -184,7 +184,7 @@ class Predictor(BasePredictorModel):
 
         # train the model
         model = self.models[key]
-        logger = TensorBoardLogger(f'{os.path.join("resources", self.expt_name)}', name=key)
+        logger = TensorBoardLogger(f'{os.path.join("models", "dms", "resources", self.expt_name)}', name=key)
         trainer = Trainer(max_epochs=max_epoch,
                           logger=logger,
                           accelerator="cuda",

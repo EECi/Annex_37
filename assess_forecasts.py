@@ -66,7 +66,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     dataset specified by provided schema.
 
     Args:
-        predictor   # todo: docstring
+        predictor (Predictor): instantiated predictor class that inherits from models.BasePredictorModel.
         schema_path (Str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         building_breakdown (bool): indicator for whether building resolved
@@ -200,7 +200,6 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
         'Carbon Intensity Forecasts': carbon_metrics,
         'Forecast Time': forecast_time_elapsed
     }
-
     return results
 
 
@@ -210,8 +209,8 @@ if __name__ == '__main__':
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
-    save = False
-    model_name = 'linear_L168_T48'
+    save = True
+    model_name = 'H256_L168_T48'
     results_file = 'forecast_results.csv'
     results_file = os.path.join('outputs', results_file)
 

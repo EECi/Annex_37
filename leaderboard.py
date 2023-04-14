@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express.colors as px
-# px.colors.qualitative.Plotly[0]
 
 
 eval_file = 'evaluate_results.csv'

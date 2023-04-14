@@ -26,7 +26,7 @@ def evaluate(predictor,
     """Evaluate performance of LinMPC controller with given Predictor model.
 
     Args:
-        predictor # todo
+        predictor (Predictor): instantiated predictor class that inherits from models.BasePredictorModel.
         schema_path (Str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         objective_dict (dict, optional): dictionary defining objective contributions
@@ -52,15 +52,6 @@ def evaluate(predictor,
     lp.set_battery_propery_data()
     lp.tau = tau
     lp.generate_LP(objective_dict=objective_dict, clip_level=clip_level)
-
-    # todo: remove
-    # # Initialise Predictor object.
-    # # ========================================================================
-    # # insert your import & setup code for your predictor here.
-    # # ========================================================================
-    #
-    # # predictor = ExamplePredictor(len(lp.b_inds), tau)
-    # predictor = DMSPredictor(expt_name='linear_L168_T48', load=True, outside_module=True)
 
     # Initialise control loop.
     forecast_time_elapsed = 0
@@ -159,8 +150,8 @@ if __name__ == '__main__':
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
-    save = False
-    model_name = 'linear_L168_T48'
+    save = True
+    model_name = 'H256_L168_T48'
     results_file = 'evaluate_results.csv'
     results_file = os.path.join('outputs', results_file)
 

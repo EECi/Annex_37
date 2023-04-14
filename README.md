@@ -41,11 +41,22 @@ Once you have a complete model implementation, you can add it to the library of 
 
 An example model implementation directory is given at `models/example`.
 
-<br>
+# Model Comparison
+We provide the following files for comparing the model's performance.
 
-ToDo: ... [`leaderboard`](outputs/leaderboard.md) ... `outputs` directory ...
+- `assess_forecast.py`
+- `evaluate.py`
+- `leaderboard.py`
 
-<br>
+Setting `save = True` in `assess_forecast.py` and `evaluate.py` will log the performances in the `outputs` directory.  
+
+Running `leaderboard.py` will then load the results from the `output` directory and update
+[leaderboard](outputs/leaderboard.md) correspondingly.  
+
+`assess_forecast.py` is used to assess the quality of the forecast only. 
+
+`evaluate.py` uses the model's forecast for model predictive control, based on linear programming. This evaluates how 
+good the forecast is for battery control.
 
 If you wish to test your model in this framework you can run `assess_forecasts.py` and `evaluate.py`, editing the runtime sections of the scripts appropriately. *However it is recommended that you do this testing in your development branch before merging your model implementation*.
 
