@@ -92,6 +92,8 @@ Participants are free to implement additional methods for their `Predictor` clas
 
 For training forecasting strategies, the training dataset is directly available in the `data` directory.
 
+**IMPORTANT NOTE: Due to the nature of the Linear Program formulation, negative predicted values can cause solver issues. To protect against this, all predicted values are clipped (lower bounded) at 0 before they are passed into the Linear Program - see `linmodel.py`. This will override any negative prediction values created.**
+
 ## Forecast Assessment
 
 The quality of forecasting achieved by the implemented prediction method (w.r.t. its match to true/ground-truth values) can be evaluated by running `assess_forecasts.py`, with suitable settings specified within the file.
