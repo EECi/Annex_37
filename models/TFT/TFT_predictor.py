@@ -64,9 +64,9 @@ class TFT_Predictor():
                 }
             elif load == 'group': # get model names for given `model_group_name`
                 for model_type in self.model_types:
-                    assert os.path.exists(os.path.join(self.model_group_path),model_type), f"`{model_type}` model logs sub-dir does not exist."
+                    assert os.path.exists(os.path.join(self.model_group_path,model_type)), f"`{model_type}` model logs sub-dir does not exist."
                 for model_type in ['pricing','carbon']:
-                    if len(list(os.scandir(os.path.join(self.model_group_path,'solar')))) > 1:
+                    if len(list(os.scandir(os.path.join(self.model_group_path,model_type)))) > 1:
                         warnings.warn(f"Warning: More than 1 {model_type} model available. 1st selected in group load.")
                 model_names = {
                     'load': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'load')) if f.is_dir()],
@@ -136,7 +136,7 @@ class TFT_Predictor():
         # of the relative path (strings) to the checkpoint file of the best version of that model
 
         load_path_file = 'best_model.json'
-        json_path = os.path.exists(model_path,load_path_file)
+        json_path = os.path.join(model_path,load_path_file)
         assert os.path.exists(json_path), "JSON indicating checkpoint file to load `{json_path}` does not exist."
 
         with open(json_path,'r') as json_file:
@@ -145,12 +145,15 @@ class TFT_Predictor():
 
         return TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
+
+
     def reformat_df(self,df,ts_name,tv_cats):
         df = df.rename_axis(self.time_id_col_name).reset_index() # create column of indices to pass as time_idx to TimeSeriesDataSet - we have no missing values
         df[self.ts_id_col_name] = ts_name # create column with ID of timeseries (constant as only single timeseries)
         for col in tv_cats:
             df[col] = df[col].astype(str) # convert to strs to use as categoric covariates
         return df
+
 
     def format_CityLearn_datasets(
         self,
@@ -370,6 +373,7 @@ class TFT_Predictor():
 
         with open(json_path,'w') as json_file:
             json.dump(best_model_path_dict, json_file)
+
 
 
     def initialise_forecasting(self, num_buildings: int, tau: int):
