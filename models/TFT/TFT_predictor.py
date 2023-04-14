@@ -277,7 +277,7 @@ class TFT_Predictor():
         # set optimizer
         if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'adam'
         # optimizer parameters
-        if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 2
+        if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
 
         # initialise TFT model from train_dataset specification
         tft = TemporalFusionTransformer.from_dataset(train_dataset,**kwargs)
@@ -339,10 +339,10 @@ class TFT_Predictor():
             devices="auto",
             strategy="auto",
             # set training parameters
-            max_epochs=100,
+            max_epochs=50,
             enable_model_summary=False, # use True to see model structure & params
             gradient_clip_val=0.1,
-            limit_train_batches=500,  # batches per epoch
+            limit_train_batches=800,  # batches per epoch
             # set logging & callbacks
             callbacks=[lr_logger, early_stop_callback, checkpoint_callback],
             logger=tb_logger
@@ -365,7 +365,7 @@ class TFT_Predictor():
 
         while current_level != model_name:
             remaining_path, current_level = os.path.split(remaining_path)
-            path_components.insert(0, current_level)
+            if current_level != model_name: path_components.insert(0, current_level)
         best_model_path_dict = {'rel_path':path_components}
 
         with open(json_path,'w') as json_file:
