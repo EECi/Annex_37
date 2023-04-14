@@ -23,6 +23,33 @@ from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer, Qu
 
 
 class TFT_Predictor():
+    """Implementation of TFT-based prediction model for the CityLearn LinMPC controller.
+
+    The provided class is used to perform the following activities:
+    - load collections of pre-trained TFT models (all models required
+        for prediction) - via `__init__` method.
+    - format CityLearn datasets - via `format_CityLearn_datasets` method.
+    - create new TFT models - via `new_model` method.
+    - train TFT models on a provided dataset - via `train_model` method.
+    - perform prediction inference - via `compute_forecast` method.
+
+    A `TFT_Predictor` object contains/loads a 'model group', which is the
+    collection of TFT modes required to produce all necessary predictions
+    for the LinMPC controller.
+    The parameters:
+    - 'encoder window' (L)
+    - 'planning horizon' (T)
+    are set to be common for the model group and are saved as mparams
+    for consistency in data handling for prediction.
+    The models comprising the model group are saved into a 'model log'
+    directory, with each type of model (load,solar,pricing,carbon)
+    stored in a sub-directory of that name.
+
+    NOTE: the order in which the models are stored in the `self.models` dict
+    (which is the same as in `self.model_names`) specifies the order in which
+    the models are used for prediction. So the index of the model must be the
+    same as the index of the buildling you want to apply it to for prediction.
+    """
 
     def __init__(self,
         model_group_name = 'default',
@@ -31,6 +58,22 @@ class TFT_Predictor():
         model_names: Union[List, Dict] = None,
         load: Union[str, bool] = 'group'
         ) -> None:
+        """Create model group object, loading models from file or initialising
+        empty model group to be populated later.
+
+        Args:
+            model_group_name (str, optional): Name of model group. Defaults to 'default'.
+            Gives name of model log diretory for model group.
+            L (int, optional): Model group encoder window parameter. Defaults to 72.
+            T (int, optional): Model group planning horizon parameter. Defaults to 48.
+            model_names (Union[List, Dict], optional): Dictionary of names of models of
+            each type to load, or list of indices to quickly specify models named `load_{index}`,
+            `solar_{index}`, `pricing`, `carbon`. Defaults to None. Not required is loading a
+            model group.
+            load (Union[str, bool], optional): Whether to load a model group ('group'),
+            load a custom selection of models ('indiv') as specified in the `model_names`
+            dict, or not load any models and initialise a blank model group. Defaults to 'group'.
+        """
 
         self.model_types = ['load','solar','pricing','carbon']
         self.model_group_name = model_group_name
@@ -120,6 +163,9 @@ class TFT_Predictor():
 
 
     def load(self) -> None:
+        """Load models specified in `self.model_names` into `self.models`.
+        Model objects are instances of `pytorch_lightning.TemporalFusionTransformer`.
+        """
 
         # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays
         self.models = {
@@ -131,9 +177,19 @@ class TFT_Predictor():
 
 
     def load_TFT_from_model_dir_path(self, model_path) -> TemporalFusionTransformer:
+        """Load best version of saved model using path to directory.
 
-        # Note: best_model.json contains a dict with one key `rel_path`, whose values is a list
-        # of the relative path (strings) to the checkpoint file of the best version of that model
+        NOTE: `best_model.json` contains a dict with one key `rel_path`, whose values is a list
+        of the relative path (strings) to the checkpoint file of the best version of that model.
+        This file is used to conventiently track the best version of the model trained so far
+        for ease of loading and continuation of training.
+
+        Args:
+            model_path (Union[str, os.Path]): path to model log directory of desired model.
+
+        Returns:
+            TemporalFusionTransformer: Loaded model object (loaded from best checkpoint file).
+        """
 
         load_path_file = 'best_model.json'
         json_path = os.path.join(model_path,load_path_file)
@@ -148,6 +204,18 @@ class TFT_Predictor():
 
 
     def reformat_df(self,df,ts_name,tv_cats):
+        """Reformat CityLearn dataset `pd.DataFrame` for construcction into
+        `pytorch_lightning.TimeSeriesDataSet`.
+        Converts categoricals to strs and adds timeseries id column.
+
+        Args:
+            df (pd.DataFrame): DataFrame to reformat.
+            ts_name (str): Timeseries id label to add.
+            tv_cats (List[str]): Column names of categorical variables to re-type.
+
+        Returns:
+            df (pd.DataFrame): Reformatted DataFrame
+        """
         df = df.rename_axis(self.time_id_col_name).reset_index() # create column of indices to pass as time_idx to TimeSeriesDataSet - we have no missing values
         df[self.ts_id_col_name] = ts_name # create column with ID of timeseries (constant as only single timeseries)
         for col in tv_cats:
@@ -161,6 +229,31 @@ class TFT_Predictor():
         model_type,
         building_index: int = None,
         ) -> List[TimeSeriesDataSet]:
+        """Format CityLearn datasets into `pytorch_lightning.TimeSeriesDataSet`
+        objects for use with pytorch_lightning objects, e.g. for training.
+        The constructed dataset is for a specified prediction variable, given
+        by the `model_type` and `building_index` (index of building in
+        CityLearnEnv.buildings list) for building specified variables (load
+        and solar).
+
+        NOTE:
+        - CityLearn datasets are specified by the path to their directory.
+        - multiple datasets can be passed for formatting. If so they are
+        all formatted in the same way, with the first used as a template
+        for the rest.
+
+        Args:
+            CityLearn_dataset_dirpaths (List[Union[str, os.Path]]): List of
+            paths to CityLearn datasets to be formatted.
+            model_type (str): Type of prediction variable to construct dataset
+            for, one of ['load','solar','pricing','carbon'].
+            building_index (int, optional): Index of building in CityLearnEnv.buildings
+            of target variable for dataset. Defaults to None. Required if target
+            variable is building specified, i.e. `model_type` is 'load' or 'solar'.
+
+        Returns:
+            List[TimeSeriesDataSet]: List of formatted datasets created.
+        """
         # format appropriate TimeSeriesDataSet from CityLearn dataset dir(s)
         # use construction from_dataset for datasets after first
 
@@ -253,6 +346,21 @@ class TFT_Predictor():
 
 
     def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, **kwargs) -> TemporalFusionTransformer:
+        """Create a new TFT model object with format given by provided TimeSeriesDataSet.
+
+        Args:
+            model_name (str): Name of model. Sets name of model log directory.
+            model_type (str): Type of variable predicted by model, one of
+            ['load','solar','pricing','carbon'].
+            train_dataset (TimeSeriesDataSet): Dataset object used to format model.
+        
+        NOTE: If the specified model name already exists within the model group,
+        the data for the existing model will be overwritten when the new model is
+        created.
+
+        Returns:
+            TemporalFusionTransformer: Created model.
+        """
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
         assert type(train_dataset) == TimeSeriesDataSet, "`train_dataset` must be a pytorch_forecasting.TimeSeriesDataSet object."
@@ -299,6 +407,15 @@ class TFT_Predictor():
 
 
     def train_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, val_dataset: TimeSeriesDataSet, **kwargs) -> None:
+        """Train specified model. Training will continue from the new available model
+        if a saved version already exists.
+
+        Args:
+            model_name (str): Name of model to train.
+            model_type (str): Type of model to train.
+            train_dataset (TimeSeriesDataSet): Training dataset to use for training.
+            val_dataset (TimeSeriesDataSet): Validation dataset to use for training.
+        """
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
         assert model_name in self.model_names[model_type], f"Model {model_name} of type {model_type} not loaded into predictor."
@@ -376,7 +493,18 @@ class TFT_Predictor():
 
 
 
-    def initialise_forecasting(self, num_buildings: int, tau: int):
+    def initialise_forecasting(self, tau: int):
+        """Initialise attributes required to perform forecasting.
+
+        NOTE: This must be done after object initialisation as
+        additional models may be added to the group, and the
+        number of models used for prediction are not known until
+        all (potentially custom) loading steps are complete.
+
+        Args:
+            tau (int): Forecasting horizon to used during prediction.
+            Must be less than the planning horzion of the model group.
+        """
 
         # define indices of variables in observations
         self.load_obs_index = 20
@@ -386,8 +514,8 @@ class TFT_Predictor():
 
         # initialise observations buffer
         self.buffer = {
-            'load': [[]*num_buildings],
-            'solar': [[]*num_buildings],
+            'load': [[]*len(self.models['load'])],
+            'solar': [[]*len(self.models['solar'])],
             'pricing': [],
             'carbon': []
         }
@@ -397,7 +525,35 @@ class TFT_Predictor():
         self.tau = tau
 
 
-    def compute_forecast(self, observations, env: CityLearnEnv, t: int):
+    def compute_forecast(self, observations, env: CityLearnEnv):
+        """Perform prediction inference required for CityLearn LinMPC controller.
+
+        NOTE: The CityLearnEnv object for which predictions are being made
+        is taken an argument here solely for the convenience of getting the
+        time info from the CityLearn environment rather than keeping track
+        of datetime objects.
+        Yes you have access to all the true data. JUST DON'T CHEAT!
+
+        Args:
+            observations (List[List]): Observations array as specified
+            by CityLearn environment
+            env (CityLearnEnv): CityLearnEnvironment object.
+        
+        NOTE: At the time of prediction, `env.time_step` (t) is the index of
+        the observations we have just recieved in the internal data lists
+        of the CityLearnEnv object. So the encoder window indices are [t-L+1,t]
+        (inclusive), and the planning horizon indices are [t+1,t+T] (inclusive)
+
+        Returns:
+            predicted_loads (np.array): predicted electrical loads of buildings in each
+                period of the planning horizon (kWh) - shape (N,tau)
+            predicted_pv_gens (np.array): predicted energy generations of pv panels in each
+                period of the planning horizon (kWh) - shape (N,tau)
+            predicted_pricing (np.array): predicted grid electricity price in each period
+                of the planning horizon ($/kWh) - shape (tau)
+            predicted_carbon (np.array): predicted grid electricity carbon intensity in each
+                period of the planning horizon (kgCO2/kWh) - shape (tau)
+        """
 
         assert all([len(self.models[key])>0 for key in self.models.keys()]), "You must load models for all variables to perform prediction."
         assert len(self.models['load']) == len(self.models['solar']) == np.array(observations).shape[0], "You must provide the same number of `load` and `solar` models as buildings being predicted for."
@@ -412,17 +568,17 @@ class TFT_Predictor():
 
 
         # Perform prediction.
-        if (len(self.buffer['pricing']) < self.L) or (env.time_steps - t < self.T):
+        if (len(self.buffer['pricing']) < self.L) or (env.time_steps - env.time_step < self.T):
             return None # opt out of prediction if buffer not yet full
         else:
             # construct base df with time & past weather info
-            months = env.buildings[0].energy_simulation.month[t-self.L+1:t+self.T+1]
-            hours = env.buildings[0].energy_simulation.hour[t-self.L+1:t+self.T+1]
-            day_types = env.buildings[0].energy_simulation.day_type[t-self.L+1:t+self.T+1]
-            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[t-self.L+1:t+self.T+1]
-            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[t-self.L+1:t+1]
-            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[t-self.L+1:t+1]
-            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[t-self.L+1:t+1]
+            months = env.buildings[0].energy_simulation.month[env.time_step-self.L+1:env.time_step+self.T+1]
+            hours = env.buildings[0].energy_simulation.hour[env.time_step-self.L+1:env.time_step+self.T+1]
+            day_types = env.buildings[0].energy_simulation.day_type[env.time_step-self.L+1:env.time_step+self.T+1]
+            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[env.time_step-self.L+1:env.time_step+self.T+1]
+            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[env.time_step-self.L+1:env.time_step+1]
+            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[env.time_step-self.L+1:env.time_step+1]
+            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[env.time_step-self.L+1:env.time_step+1]
 
             base_df = pd.DataFrame({
                 'Month': months,
@@ -436,12 +592,12 @@ class TFT_Predictor():
             base_df = self.reformat_df(base_df,'pred',self.time_varying_known_categoricals)
 
             # perform load forecasting
-            load_forecasts = []
+            predicted_loads = []
             for j,model in enumerate(self.models['load']):
 
                 # construct data df 
                 data_df = base_df.copy()
-                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-model.max_encoder_length:],np.zeros(model.max_prediction_length))
+                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-model.L:],np.zeros(model.T))
 
                 # TODO: can I simply take in a dataframe for prediction or do I need to convert it to a dataloader or TimeSeriesDataSet?
 
@@ -449,7 +605,7 @@ class TFT_Predictor():
                 load_prediction = model.predict(data_df, mode='prediction')
 
                 # save prediction in structure
-                load_forecasts.append(load_prediction)
+                predicted_loads.append(load_prediction)
 
             if model_type == 'solar':
                 target = self.solar_col_name
@@ -464,4 +620,4 @@ class TFT_Predictor():
                 ts_name = 'c'
                 time_varying_unknown_reals = [self.carbon_col_name]
 
-        return np.array(load_forecasts), ... # return structured predictions
+        return np.array(predicted_loads), ... # return structured predictions
