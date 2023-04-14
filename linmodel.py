@@ -314,11 +314,14 @@ class LinProgModel():
             or not hasattr(self,'carbon_intensities') or not hasattr(self,'battery_initial_socs'):
             raise NameError("Data must be loaded before parameters can be set.")
 
-        self.current_socs.value = self.battery_initial_socs
-        self.elec_loads_param.value = self.elec_loads
-        self.solar_gens_param.value = self.solar_gens
-        self.prices_param.value = self.prices
-        self.carbon_intensities_param.value = self.carbon_intensities
+        # NOTE: clip parameter values at 0 to prevent LP solve issues
+        # This requirement is for the current LP formulation and could be
+        # relaxed with an alternative model setup.
+        self.current_socs.value = self.battery_initial_socs.clip(min=0)
+        self.elec_loads_param.value = self.elec_loads.clip(min=0)
+        self.solar_gens_param.value = self.solar_gens.clip(min=0)
+        self.prices_param.value = self.prices.clip(min=0)
+        self.carbon_intensities_param.value = self.carbon_intensities.clip(min=0)
 
 
     def solve_LP(self, **kwargs):
