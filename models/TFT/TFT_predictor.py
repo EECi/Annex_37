@@ -5,7 +5,6 @@ import glob
 import shutil
 import json
 from typing import Any, List, Dict, Union
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -19,6 +18,10 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.tuner.tuning import Tuner
 from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer, QuantileLoss
+
+# filer warnings: mostly object reload & numpy deprecation warnings
+import warnings
+warnings.filterwarnings(action='ignore',module=r'pytorch_forecasting')
 
 
 
@@ -45,10 +48,13 @@ class TFT_Predictor():
     directory, with each type of model (load,solar,pricing,carbon)
     stored in a sub-directory of that name.
 
-    NOTE: the order in which the models are stored in the `self.models` dict
+    NOTE: The order in which the models are stored in the `self.models` dict
     (which is the same as in `self.model_names`) specifies the order in which
     the models are used for prediction. So the index of the model must be the
     same as the index of the buildling you want to apply it to for prediction.
+    EXTRA NOTE: When loading model groups implicitly be careful about the order
+    in which models are loaded, as this may not be the way they display in your
+    directory viewer. The ordering of strings is... complicated.
     """
 
     def __init__(self,
@@ -75,9 +81,25 @@ class TFT_Predictor():
             dict, or not load any models and initialise a blank model group. Defaults to 'group'.
         """
 
+        # Specify model parameters.
         self.model_types = ['load','solar','pricing','carbon']
         self.model_group_name = model_group_name
         self.model_group_path = os.path.join('models','TFT','resources','model_logs',model_group_name)
+
+        # Specify column name variables for data formatting.
+        self.time_id_col_name = 'time_idx'
+        self.ts_id_col_name = 'ts_id'
+        self.load_col_name = 'Equipment Electric Power [kWh]'
+        self.temp_col_name = 'Outdoor Drybulb Temperature [C]'
+        self.solar_col_name = 'Solar Generation Power [kW]'
+        self.dif_irad_col_name = 'Diffuse Solar Radiation [W/m2]'
+        self.dir_irad_col_name = 'Direct Solar Radiation [W/m2]'
+        self.pricing_col_name = 'Electricity Pricing [£]'
+        self.carbon_col_name = 'Carbon Intensity [kg_CO2/kWh]'
+
+        # Specify common categoric covariates for models.
+        self.time_varying_known_categoricals = ['Month','Hour','Day Type','Daylight Savings Status']
+
 
         if load in ['group','indiv']:
             assert os.path.exists(self.model_group_path), "Cannot load model group as logs do not exist!"
@@ -264,17 +286,6 @@ class TFT_Predictor():
 
         building_fname_pattern = 'UCam_Building*.csv'
 
-        # Specify column name variables.
-        self.time_id_col_name = 'time_idx'
-        self.ts_id_col_name = 'ts_id'
-        self.load_col_name = 'Equipment Electric Power [kWh]'
-        self.temp_col_name = 'Outdoor Drybulb Temperature [C]'
-        self.solar_col_name = 'Solar Generation Power [kW]'
-        self.dif_irad_col_name = 'Diffuse Solar Radiation [W/m2]'
-        self.dir_irad_col_name = 'Direct Solar Radiation [W/m2]'
-        self.pricing_col_name = 'Electricity Pricing [£]'
-        self.carbon_col_name = 'Carbon Intensity [kg_CO2/kWh]'
-
         # Set default kwargs.
         if model_type == 'load':
             target = self.load_col_name
@@ -293,7 +304,6 @@ class TFT_Predictor():
             ts_name = 'c'
             time_varying_unknown_reals = [self.carbon_col_name]
 
-        self.time_varying_known_categoricals = ['Month','Hour','Day Type','Daylight Savings Status']
 
         ts_datasets = []
 
@@ -514,8 +524,8 @@ class TFT_Predictor():
 
         # initialise observations buffer
         self.buffer = {
-            'load': [[]*len(self.models['load'])],
-            'solar': [[]*len(self.models['solar'])],
+            'load': [[] for l in range(len(self.models['load'].keys()))],
+            'solar': [[] for l in range(len(self.models['solar'].keys()))],
             'pricing': [],
             'carbon': []
         }
@@ -561,9 +571,9 @@ class TFT_Predictor():
         # Update observation buffers.
         for model_type,obs_id in zip(self.model_types,[self.load_obs_index,self.solar_obs_index,self.pricing_obs_index,self.carbon_obs_index]):
             if model_type in ['load','solar']:
-                for j,val in np.array(observations)[:, obs_id]:
+                for j,val in enumerate(np.array(observations)[:, obs_id]):
                     self.buffer[model_type][j].append(val)
-            else:
+            else: # pricing and carbon observations are shared between buildings
                 self.buffer[model_type].append(np.array(observations)[0, obs_id])
 
 
@@ -593,31 +603,33 @@ class TFT_Predictor():
 
             # perform load forecasting
             predicted_loads = []
-            for j,model in enumerate(self.models['load']):
-
-                # construct data df 
+            for j,model in enumerate(self.models['load'].values()):
                 data_df = base_df.copy()
-                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-model.L:],np.zeros(model.T))
-
-                # TODO: can I simply take in a dataframe for prediction or do I need to convert it to a dataloader or TimeSeriesDataSet?
-
-                # perform prediction
-                load_prediction = model.predict(data_df, mode='prediction')
-
-                # save prediction in structure
+                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-self.L:],np.zeros(self.T))
+                load_prediction = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_loads.append(load_prediction)
+                # TODO: can I simply take in a dataframe for prediction or do I need to convert it to a dataloader or TimeSeriesDataSet?
+            predicted_loads = np.array(predicted_loads)
 
-            if model_type == 'solar':
-                target = self.solar_col_name
-                ts_name = 's'
-                time_varying_unknown_reals = [self.solar_col_name,self.dif_irad_col_name,self.dir_irad_col_name]
-            elif model_type == 'pricing':
-                target = self.pricing_col_name
-                ts_name = 'p'
-                time_varying_unknown_reals = [self.pricing_col_name]
-            elif model_type == 'carbon':
-                target = self.carbon_col_name
-                ts_name = 'c'
-                time_varying_unknown_reals = [self.carbon_col_name]
+            # perform solar forecasting
+            predicted_pv_gens = []
+            for j,model in enumerate(self.models['solar'].values()):
+                data_df = base_df.copy()
+                data_df[self.solar_col_name] = np.append(self.buffer['solar'][j][-self.L:],np.zeros(self.T))
+                solar_prediction = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+                predicted_pv_gens.append(solar_prediction)
+            predicted_pv_gens = np.array(predicted_pv_gens)
 
-        return np.array(predicted_loads), ... # return structured predictions
+            # perform pricing forecasting
+            model = list(self.models['pricing'].values())[0]
+            data_df = base_df.copy()
+            data_df[self.pricing_col_name] = np.append(self.buffer['pricing'][-self.L:],np.zeros(self.T))
+            predicted_pricing = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+
+            # perform pricing forecasting
+            model = list(self.models['carbon'].values())[0]
+            data_df = base_df.copy()
+            data_df[self.carbon_col_name] = np.append(self.buffer['carbon'][-self.L:],np.zeros(self.T))
+            predicted_carbon = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+
+        return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon
