@@ -5,7 +5,7 @@ import json
 from models.TFT.TFT_predictor import TFT_Predictor
 
 
-def main(model_group_name, UCam_ids):
+def main(model_group_name, UCam_ids, train_path, val_path):
 
     # initialise new model group
     TFT_group = TFT_Predictor(model_group_name=model_group_name,load=False)
@@ -52,4 +52,4 @@ if __name__ == '__main__':
     # set TFT model group parameters
     model_group_name = 'example'
 
-    main(model_group_name, UCam_ids)
+    main(model_group_name, UCam_ids, train_path, val_path)
