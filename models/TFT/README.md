@@ -6,3 +6,9 @@ Run files using syntax
 ```
 python3 -m models.TFT.create_train_TFT
 ```
+
+Requires call of
+```
+TFT_Predictor.initialise_forecasting(tau)
+```
+to enter forecasting mode (enable successive inference)
