@@ -118,7 +118,7 @@ class TFT_Predictor():
                 'carbon': 'carbon'
             }
         elif type(model_names) == dict: # model provided as dictionary of model names
-            assert [key in list(model_names.keys) for key in self.model_types]
+            assert [key in list(model_names.keys()) for key in self.model_types]
         elif not model_names: # model names not provided
             if not load: # initialise blank dict of model names to be filled later
                 model_names = {
