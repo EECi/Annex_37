@@ -213,9 +213,11 @@ class TFT_Predictor():
             TemporalFusionTransformer: Loaded model object (loaded from best checkpoint file).
         """
 
+        assert os.path.exists(model_path), f"The requested model `{model_path}` does not exist."
+
         load_path_file = 'best_model.json'
         json_path = os.path.join(model_path,load_path_file)
-        assert os.path.exists(json_path), "JSON indicating checkpoint file to load `{json_path}` does not exist."
+        assert os.path.exists(json_path), f"JSON indicating checkpoint file to load `{json_path}` does not exist."
 
         with open(json_path,'r') as json_file:
             best_model_chkpt = json.load(json_file)['rel_path']
@@ -550,7 +552,7 @@ class TFT_Predictor():
             env (CityLearnEnv): CityLearnEnvironment object.
         
         NOTE: At the time of prediction, `env.time_step` (t) is the index of
-        the observations we have just recieved in the internal data lists
+        the observations we have just received in the internal data lists
         of the CityLearnEnv object. So the encoder window indices are [t-L+1,t]
         (inclusive), and the planning horizon indices are [t+1,t+T] (inclusive)
 
@@ -565,6 +567,7 @@ class TFT_Predictor():
                 period of the planning horizon (kgCO2/kWh) - shape (tau)
         """
 
+        assert hasattr(self, 'buffer'), "You must enter prediction mode by calling `self.initialise_forecasting(tau)` before forecasting can be performed."
         assert all([len(self.models[key])>0 for key in self.models.keys()]), "You must load models for all variables to perform prediction."
         assert len(self.models['load']) == len(self.models['solar']) == np.array(observations).shape[0], "You must provide the same number of `load` and `solar` models as buildings being predicted for."
 
@@ -608,7 +611,6 @@ class TFT_Predictor():
                 data_df[self.load_col_name] = np.append(self.buffer['load'][j][-self.L:],np.zeros(self.T))
                 load_prediction = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_loads.append(load_prediction)
-                # TODO: can I simply take in a dataframe for prediction or do I need to convert it to a dataloader or TimeSeriesDataSet?
             predicted_loads = np.array(predicted_loads)
 
             # perform solar forecasting
