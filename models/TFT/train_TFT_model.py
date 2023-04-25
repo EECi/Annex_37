@@ -7,7 +7,7 @@ from models.TFT.TFT_predictor import TFT_Predictor
 
 def main(model_group_name, model_type, model_name, building_index, train_path, val_path):
 
-    # load model group
+    # load model group - note ordering does not matter
     TFT_group = TFT_Predictor(model_group_name, load='group')
 
     # check requested model is valid

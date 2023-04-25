@@ -17,7 +17,7 @@ def main(model_group_name, model_type, model_name, building_index,
     save_path='temp.html', **kwargs
     ):
 
-    # load model group
+    # load model group - note ordering does not matter
     TFT_group = TFT_Predictor(model_group_name, load='group')
 
     # check requested model is valid
