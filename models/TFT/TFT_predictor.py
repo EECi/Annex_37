@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from citylearn.citylearn import CityLearnEnv
+from models.base_predictor_model import BasePredictorModel
 
 import torch
 import pytorch_lightning as pl
@@ -25,7 +26,7 @@ warnings.filterwarnings(action='ignore',module=r'pytorch_forecasting')
 
 
 
-class TFT_Predictor():
+class TFT_Predictor(BasePredictorModel):
     """Implementation of TFT-based prediction model for the CityLearn LinMPC controller.
 
     The provided class is used to perform the following activities:
