@@ -8,6 +8,7 @@ in comparison to ground truth values of prediction variables.
 """
 
 import os
+import csv
 import time
 import numpy as np
 import cvxpy as cp
@@ -15,7 +16,7 @@ import cvxpy as cp
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from predictor import Predictor
+from models import ExamplePredictor, DMSPredictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -42,7 +43,7 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
     for forecast, actual in zip(forecasts_array, ground_truth_array):
         a = np.array(actual)
         f = np.array(forecast)[:len(a)]
-        metric_scores.append(metric(f,a))
+        metric_scores.append(metric(f, a))
 
     metric_score = np.mean(metric_scores)
 
@@ -51,18 +52,21 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
 
     return metric_score
 
+
 def MAE(prediction, actual):
     return np.mean(np.abs((prediction-actual)))
 
+
 def RMSE(prediction, actual):
-    return np.sqrt(np.mean(np.power(prediction-actual,2)))
+    return np.sqrt(np.mean(np.power(prediction-actual, 2)))
 
 
-def assess(schema_path, tau, building_breakdown=False, **kwargs):
+def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     """Evaluate forecasting performance of given Predictor model for
     dataset specified by provided schema.
 
     Args:
+        predictor (Predictor): instantiated predictor class that inherits from models.BasePredictorModel.
         schema_path (Str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         building_breakdown (bool): indicator for whether building resolved
@@ -84,13 +88,11 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     # insert your import & setup code for your predictor here.
     # ========================================================================
 
-    predictor = Predictor(len(env.buildings), tau)
-
     # Initialise logging objects.
-    load_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
-    pv_gen_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
-    pricing_logs = {'forecasts':[], 'actuals':[]}
-    carbon_logs = {'forecasts':[], 'actuals':[]}
+    load_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
+    pv_gen_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
+    pricing_logs = {'forecasts': [], 'actuals': []}
+    carbon_logs = {'forecasts': [], 'actuals': []}
 
     # Initialise forecasting loop.
     forecast_time_elapsed = 0
@@ -103,7 +105,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     with tqdm(total=env.time_steps) as pbar:
 
         while not done:
-            if num_steps%100 == 0:
+            if num_steps % 100 == 0:
                 pbar.update(100)
 
             # Compute forecast.
@@ -112,11 +114,11 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
             # Perform logging.
-            if forecasts is None: # forecastor opt out
-                pass # no forecast to evaluate
+            if forecasts is None:   # forecastor opt out
+                pass    # no forecast to evaluate
             else:
                 # Log forecasts.
-                for i,b in enumerate(env.buildings):
+                for i, b in enumerate(env.buildings):
                     load_logs[b.name]['forecasts'].append(forecasts[0][i])
                     pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i])
                 pricing_logs['forecasts'].append(forecasts[2])
@@ -139,13 +141,13 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
     # Compute forecasting performance metrics.
     metrics = [MAE,RMSE]
-    metric_names = ['gmnMAE','gmnRMSE']
-    globally_mean_normalised = [True,True]
+    metric_names = ['gmnMAE', 'gmnRMSE']
+    globally_mean_normalised = [True, True]
 
     load_metrics = {
         b.name:{
-            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'],metric,gnorm)\
-                for metric,mname,gnorm in zip(metrics,metric_names,globally_mean_normalised)
+            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'], metric, gnorm)\
+                for metric, mname, gnorm in zip(metrics, metric_names, globally_mean_normalised)
         } for b in env.buildings
     }
     load_metrics['buildings_average'] = {mname: np.mean([load_metrics[b.name][mname] for b in env.buildings])\
@@ -191,7 +193,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
             print("---Solar Generation---")
             for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics[b.name][mname],5)}")
 
-
     results = {
         'Load Forecasts': load_metrics,
         'Solar Generation Forecasts': pv_gen_metrics,
@@ -199,20 +200,56 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
         'Carbon Intensity Forecasts': carbon_metrics,
         'Forecast Time': forecast_time_elapsed
     }
-
     return results
 
 
 if __name__ == '__main__':
     import warnings
 
-    dataset_dir = os.path.join('example','test') # dataset directory
+    # Set parameters and instantiate predictor
+    # ==================================================================================================================
+    # Parameters
+    save = True
+    model_name = 'H256_L168_T48'
+    results_file = 'forecast_results.csv'
+    results_file = os.path.join('outputs', results_file)
 
-    schema_path = os.path.join('data',dataset_dir,'schema.json')
+    # Instantiate predictor
+    # predictor = ExamplePredictor(6, 48)
+    predictor = DMSPredictor(expt_name=model_name, load=True)
+    # ==================================================================================================================
 
-    tau = 48 # model prediction horizon (number of timesteps of data predicted)
-
+    # assess forecasts
+    tau = 48  # model prediction horizon (number of timesteps of data predicted)
+    dataset_dir = os.path.join('example', 'test')  # dataset directory
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore',module=r'cvxpy')
+        warnings.filterwarnings(action='ignore', module=r'cvxpy')
+        results = assess(predictor, schema_path, tau, building_breakdown=True)
 
-        results = assess(schema_path, tau, building_breakdown=True)
+    if save:
+        header = ['Model', 'P', 'C']
+        load_header = [
+            'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
+        solar_header = [
+            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+
+        header += load_header
+        header += solar_header
+        out = [model_name, results['Pricing Forecasts']['gmnMAE'], results['Carbon Intensity Forecasts']['gmnMAE']]
+
+        for k, v in results['Load Forecasts'].items():
+            if 'average' not in k:
+                out.append(v['gmnMAE'])
+        for k, v in results['Solar Generation Forecasts'].items():
+            if 'average' not in k:
+                out.append(v['gmnMAE'])
+
+        if not os.path.exists(results_file):
+            with open(results_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(out)
+
