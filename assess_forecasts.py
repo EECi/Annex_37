@@ -11,7 +11,6 @@ import os
 import csv
 import time
 import numpy as np
-import cvxpy as cp
 
 from tqdm import tqdm
 
