@@ -10,7 +10,6 @@ in comparison to ground truth values of prediction variables.
 import os
 import time
 import numpy as np
-import cvxpy as cp
 
 from tqdm import tqdm
 
