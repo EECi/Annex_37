@@ -535,6 +535,7 @@ class TFT_Predictor(BasePredictorModel):
         }
 
         # grab time data from environment & store
+        self.simulation_duration = env.time_steps
         self.months = env.buildings[0].energy_simulation.month
         self.hours = env.buildings[0].energy_simulation.hour
         self.day_types = env.buildings[0].energy_simulation.day_type
@@ -593,7 +594,7 @@ class TFT_Predictor(BasePredictorModel):
 
 
         # Perform prediction.
-        if (len(self.buffer['pricing']) < self.L) or (env.time_steps - env.time_step < self.T):
+        if (len(self.buffer['pricing']) < self.L) or (self.simulation_duration - t < self.T):
             return None # opt out of prediction if buffer not yet full
         else:
             # construct base df with time & past weather info
