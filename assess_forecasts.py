@@ -16,7 +16,7 @@ import cvxpy as cp
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor, DMSPredictor
+from models import TFT_Predictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -110,7 +110,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
             # Compute forecast.
             forecast_start = time.perf_counter()
-            forecasts = predictor.compute_forecast(observations)
+            forecasts = predictor.compute_forecast(observations, env) # NOTE: TFT predictor requires additional `env` argument
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
             # Perform logging.
@@ -209,14 +209,15 @@ if __name__ == '__main__':
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
-    save = True
-    model_name = 'H256_L168_T48'
+    save = False
+    model_name = 'TFT_test'
     results_file = 'forecast_results.csv'
     results_file = os.path.join('outputs', results_file)
 
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name=model_name, load=True)
+    UCam_ids = [5,11,14,16,24,29]
+    predictor = TFT_Predictor(model_group_name='test',model_names=UCam_ids)
     # ==================================================================================================================
 
     # assess forecasts
@@ -225,6 +226,7 @@ if __name__ == '__main__':
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
+        predictor.initialise_forecasting(tau=tau) # NOTE: line specific to TFT implementation
         results = assess(predictor, schema_path, tau, building_breakdown=True)
 
     if save:
