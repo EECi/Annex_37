@@ -506,7 +506,7 @@ class TFT_Predictor(BasePredictorModel):
 
 
 
-    def initialise_forecasting(self, tau: int):
+    def initialise_forecasting(self, tau: int, env: CityLearnEnv):
         """Initialise attributes required to perform forecasting.
 
         NOTE: This must be done after object initialisation as
@@ -517,6 +517,7 @@ class TFT_Predictor(BasePredictorModel):
         Args:
             tau (int): Forecasting horizon to used during prediction.
             Must be less than the planning horzion of the model group.
+            env (CityLearnEnv): CityLearnEnvironment object.
         """
 
         # define indices of variables in observations
@@ -533,12 +534,21 @@ class TFT_Predictor(BasePredictorModel):
             'carbon': []
         }
 
+        # grab time data from environment & store
+        self.months = env.buildings[0].energy_simulation.month
+        self.hours = env.buildings[0].energy_simulation.hour
+        self.day_types = env.buildings[0].energy_simulation.day_type
+        self.day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status
+        self.past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature
+        self.past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance
+        self.past_dir_irads = env.buildings[0].weather.direct_solar_irradiance
+
         # check prediction models can provide specified tau
         assert self.T >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large (> {self.T})."
         self.tau = tau
 
 
-    def compute_forecast(self, observations, env: CityLearnEnv):
+    def compute_forecast(self, observations, t: int):
         """Perform prediction inference required for CityLearn LinMPC controller.
 
         NOTE: The CityLearnEnv object for which predictions are being made
@@ -550,8 +560,9 @@ class TFT_Predictor(BasePredictorModel):
         Args:
             observations (List[List]): Observations array as specified
             by CityLearn environment
-            env (CityLearnEnv): CityLearnEnvironment object.
-        
+            t: current value of `env.time_step` (i.e. when prediction
+            is made)
+
         NOTE: At the time of prediction, `env.time_step` (t) is the index of
         the observations we have just received in the internal data lists
         of the CityLearnEnv object. So the encoder window indices are [t-L+1,t]
@@ -586,13 +597,13 @@ class TFT_Predictor(BasePredictorModel):
             return None # opt out of prediction if buffer not yet full
         else:
             # construct base df with time & past weather info
-            months = env.buildings[0].energy_simulation.month[env.time_step-self.L+1:env.time_step+self.T+1]
-            hours = env.buildings[0].energy_simulation.hour[env.time_step-self.L+1:env.time_step+self.T+1]
-            day_types = env.buildings[0].energy_simulation.day_type[env.time_step-self.L+1:env.time_step+self.T+1]
-            day_save_statuses = env.buildings[0].energy_simulation.daylight_savings_status[env.time_step-self.L+1:env.time_step+self.T+1]
-            past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature[env.time_step-self.L+1:env.time_step+1]
-            past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance[env.time_step-self.L+1:env.time_step+1]
-            past_dir_irads = env.buildings[0].weather.direct_solar_irradiance[env.time_step-self.L+1:env.time_step+1]
+            months = self.months[t-self.L+1:t+self.T+1]
+            hours = self.hours[t-self.L+1:t+self.T+1]
+            day_types = self.day_types[t-self.L+1:t+self.T+1]
+            day_save_statuses = self.day_save_statuses[t-self.L+1:t+self.T+1]
+            past_temps = self.past_temps[t-self.L+1:t+1]
+            past_dif_irads = self.past_dif_irads[t-self.L+1:t+1]
+            past_dir_irads =self.past_dir_irads[t-self.L+1:t+1]
 
             base_df = pd.DataFrame({
                 'Month': months,
