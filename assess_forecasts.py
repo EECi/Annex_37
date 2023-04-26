@@ -81,6 +81,9 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Initialise CityLearn environment object.
     env = CityLearnEnv(schema=schema_path)
 
+    # Put predictor into forecasting mode.
+    predictor.initialise_forecasting(tau=tau, env=env) # NOTE: line specific to TFT implementation
+
     # Initialise Predictor object.
 
     # ========================================================================
@@ -103,13 +106,14 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Execute control loop.
     with tqdm(total=env.time_steps) as pbar:
 
-        while not done:
+        #while not done:
+        while num_steps < 500:
             if num_steps % 100 == 0:
                 pbar.update(100)
 
             # Compute forecast.
             forecast_start = time.perf_counter()
-            forecasts = predictor.compute_forecast(observations, env) # NOTE: TFT predictor requires additional `env` argument
+            forecasts = predictor.compute_forecast(observations, env.time_step) # NOTE: additional argument specific to TFT
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
             # Perform logging.
@@ -225,7 +229,6 @@ if __name__ == '__main__':
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        predictor.initialise_forecasting(tau=tau) # NOTE: line specific to TFT implementation
         results = assess(predictor, schema_path, tau, building_breakdown=True)
 
     if save:
