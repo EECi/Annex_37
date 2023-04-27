@@ -567,6 +567,11 @@ class TFT_Predictor(BasePredictorModel):
         self.past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance
         self.past_dir_irads = env.buildings[0].weather.direct_solar_irradiance
 
+        # put models in evaluation mode for prediction
+        for model_type in self.models.keys():
+            for model in self.models[model_type].values():
+                model.eval()
+
 
     def compute_forecast(self, observations, t: int):
         """Perform prediction inference required for CityLearn LinMPC controller.
