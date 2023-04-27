@@ -106,10 +106,9 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Execute control loop.
     with tqdm(total=env.time_steps) as pbar:
 
-        #while not done:
-        while num_steps < 500:
-            if num_steps % 100 == 0:
-                pbar.update(100)
+        while not done:
+            if num_steps % 10 == 0:
+                pbar.update(10)
 
             # Compute forecast.
             forecast_start = time.perf_counter()
