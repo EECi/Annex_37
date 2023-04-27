@@ -248,6 +248,40 @@ class TFT_Predictor(BasePredictorModel):
         return df
 
 
+    def make_TimeSeriesDataSet(self, data_df: pd.DataFrame, target: str, time_varying_unknown_reals: List[str]):
+        """Format pandas.DataFrame dataset into pytorch_forecasting.TimeSeriesDataSet
+        using group model attributes.
+
+        Args:
+            data_df (pd.DataFrame): Dataset to be formatted.
+            target (str): Column name of target variable in input dataset.
+            time_varying_unknown_reals (List[str]): List of time varying unknown real
+            covariates for desired target variable.
+
+        Returns:
+            timeseries_dataset (TimeSeriesDataSet):Formatted dataset.
+        """
+
+        timeseries_dataset = TimeSeriesDataSet(
+            data_df,
+            time_idx=self.time_id_col_name,  # column name of time of observation
+            target=target,  # column name of target to predict
+            group_ids=[self.ts_id_col_name],  # column name(s) for timeseries IDs (static as only 1 timeseries used)
+            max_encoder_length=self.L,  # how much history to use
+            max_prediction_length=self.T,  # how far to predict into future
+            # covariates static for a timeseries ID - ignore for the moment
+            #static_categoricals=[ ... ],
+            #static_reals=[ ... ],
+            # covariates known and unknown in the future to inform prediction
+            time_varying_known_categoricals=self.time_varying_known_categoricals,
+            #time_varying_known_reals=[ ... ],
+            #time_varying_unknown_categoricals=[ ... ],
+            time_varying_unknown_reals=time_varying_unknown_reals
+        )
+
+        return timeseries_dataset
+
+
     def format_CityLearn_datasets(
         self,
         CityLearn_dataset_dirpaths,
@@ -333,22 +367,7 @@ class TFT_Predictor(BasePredictorModel):
                 data_df[self.carbon_col_name] = env.buildings[0].carbon_intensity.carbon_intensity
 
             if i == 0:
-                timeseries_dataset = TimeSeriesDataSet(
-                    data_df,
-                    time_idx=self.time_id_col_name,  # column name of time of observation
-                    target=target,  # column name of target to predict
-                    group_ids=[self.ts_id_col_name],  # column name(s) for timeseries IDs (static as only 1 timeseries used)
-                    max_encoder_length=self.L,  # how much history to use
-                    max_prediction_length=self.T,  # how far to predict into future
-                    # covariates static for a timeseries ID - ignore for the moment
-                    #static_categoricals=[ ... ],
-                    #static_reals=[ ... ],
-                    # covariates known and unknown in the future to inform prediction
-                    time_varying_known_categoricals=self.time_varying_known_categoricals,
-                    #time_varying_known_reals=[ ... ],
-                    #time_varying_unknown_categoricals=[ ... ],
-                    time_varying_unknown_reals=time_varying_unknown_reals
-                )
+                timeseries_dataset = self.make_TimeSeriesDataSet(data_df,target,time_varying_unknown_reals)
             else:
                 timeseries_dataset = TimeSeriesDataSet.from_dataset(ts_datasets[0], data_df)
 
@@ -520,6 +539,10 @@ class TFT_Predictor(BasePredictorModel):
             env (CityLearnEnv): CityLearnEnvironment object.
         """
 
+        # check prediction models can provide specified tau
+        assert self.T >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large (> {self.T})."
+        self.tau = tau
+
         # define indices of variables in observations
         self.load_obs_index = 20
         self.solar_obs_index = 21
@@ -543,10 +566,6 @@ class TFT_Predictor(BasePredictorModel):
         self.past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature
         self.past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance
         self.past_dir_irads = env.buildings[0].weather.direct_solar_irradiance
-
-        # check prediction models can provide specified tau
-        assert self.T >= tau, f"Models cannot forecast for planning horizon {tau}, tau too large (> {self.T})."
-        self.tau = tau
 
 
     def compute_forecast(self, observations, t: int):
