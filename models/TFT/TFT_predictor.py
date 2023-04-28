@@ -430,7 +430,7 @@ class TFT_Predictor(BasePredictorModel):
 
         if os.path.exists(model_path):
             warnings.warn("Warning: A logs directory already exists for the model name `{}`. By continuing you will overwrite this model.".format(model_name))
-            if pre_confirm:
+            if not pre_confirm:
                 if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
                     print("Aborting model creation.")
                     return
