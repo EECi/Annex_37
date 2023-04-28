@@ -42,9 +42,9 @@ For more info on loading models see the implementation of the `TFT_Predictor.__i
 
 Before prediction can be performed, the model must be set into prediction mode using the following command,
 ```
-TFT_Predictor.initialise_forecasting(tau)
+TFT_Predictor.initialise_forecasting(tau, env)
 ```
-where `tau` is the desired forecasting horizon. This must be done *after* all models are loaded into the object.
+where `tau` is the desired forecasting horizon, and `env` is the `CityLearnEnv` object on which prediction is being done. This must be done *after* all models are loaded into the object.
 
 ## Directory structure
 
