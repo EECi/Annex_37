@@ -567,7 +567,7 @@ class TFT_Predictor(BasePredictorModel):
 
         Args:
             tau (int): Forecasting horizon to used during prediction.
-            Must be less than the planning horzion of the model group.
+            Must be less than the planning horizon of the model group.
             env (CityLearnEnv): CityLearnEnvironment object.
         """
 
