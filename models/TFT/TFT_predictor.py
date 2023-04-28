@@ -282,6 +282,16 @@ class TFT_Predictor(BasePredictorModel):
         return timeseries_dataset
 
 
+    def get_TimeSeriesDataSet_parameters(self, model_type: str, model_name: str) -> Dict:
+        """Load TimeSeriesDataSet parameters for trained model from json."""
+
+        dataset_params_path = os.path.join(self.model_group_path,model_type,model_name,'timeseries_dataset_params.json')
+        with open(dataset_params_path,'r') as json_file:
+            tsds_params = json.load(json_file)
+
+        return tsds_params
+
+
     def format_CityLearn_datasets(
         self,
         CityLearn_dataset_dirpaths,
@@ -328,9 +338,7 @@ class TFT_Predictor(BasePredictorModel):
             raise ValueError(f"Must supply `building_index` to construct {model_type} dataset from CityLearn data.")
         
         if model_name is not None:
-            dataset_params_path = os.path.join(self.model_group_path,model_type,model_name,'timeseries_dataset_params.json')
-            with open(dataset_params_path,'r') as json_file:
-                tsds_params = json.load(json_file)
+            tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
         else:
             warnings.warn("Warning: Creating new TimeSeriesDataSet object with new encodings/scalings. Note, only to be used for training a new model.")
 
@@ -667,32 +675,44 @@ class TFT_Predictor(BasePredictorModel):
 
             # perform load forecasting
             predicted_loads = []
-            for j,model in enumerate(self.models['load'].values()):
+            for j,model_name in enumerate(self.model_names['load'].values()):
+                model = self.models['load'][model_name]
+                tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
                 data_df = base_df.copy()
                 data_df[self.load_col_name] = np.append(self.buffer['load'][j][-self.L:],np.zeros(self.T))
-                load_prediction = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+                data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
+                load_prediction = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_loads.append(load_prediction)
             predicted_loads = np.array(predicted_loads)
 
             # perform solar forecasting
             predicted_pv_gens = []
-            for j,model in enumerate(self.models['solar'].values()):
+            for j,model_name in enumerate(self.model_names['solar'].values()):
+                model = self.models['load'][model_name]
+                tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
                 data_df = base_df.copy()
                 data_df[self.solar_col_name] = np.append(self.buffer['solar'][j][-self.L:],np.zeros(self.T))
-                solar_prediction = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+                data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
+                solar_prediction = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_pv_gens.append(solar_prediction)
             predicted_pv_gens = np.array(predicted_pv_gens)
 
             # perform pricing forecasting
-            model = list(self.models['pricing'].values())[0]
+            model_name = list(self.model_names['pricing'].values())[0]
+            model = self.models['pricing'][model_name]
+            tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
             data_df = base_df.copy()
             data_df[self.pricing_col_name] = np.append(self.buffer['pricing'][-self.L:],np.zeros(self.T))
-            predicted_pricing = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+            data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
+            predicted_pricing = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
 
-            # perform pricing forecasting
-            model = list(self.models['carbon'].values())[0]
+            # perform carbon forecasting
+            model_name = list(self.model_names['carbon'].values())[0]
+            model = self.models['carbon'][model_name]
+            tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
             data_df = base_df.copy()
             data_df[self.carbon_col_name] = np.append(self.buffer['carbon'][-self.L:],np.zeros(self.T))
-            predicted_carbon = np.array(model.predict(data_df, mode='prediction')).reshape(self.T)[:self.tau]
+            data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
+            predicted_carbon = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
 
         return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon
