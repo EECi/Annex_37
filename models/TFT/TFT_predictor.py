@@ -134,7 +134,7 @@ class TFT_Predictor(BasePredictorModel):
                     assert os.path.exists(os.path.join(self.model_group_path,model_type)), f"`{model_type}` model logs sub-dir does not exist."
                 for model_type in ['pricing','carbon']:
                     if len(list(os.scandir(os.path.join(self.model_group_path,model_type)))) > 1:
-                        warnings.warn(f"Warning: More than 1 {model_type} model available. 1st selected in group load.")
+                        warnings.warn("Warning: More than 1 {} model available. 1st selected in group load.".format(model_type))
                 model_names = {
                     'load': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'load')) if f.is_dir()],
                     'solar': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'solar')) if f.is_dir()],
@@ -170,7 +170,7 @@ class TFT_Predictor(BasePredictorModel):
             }
 
             if os.path.exists(self.model_group_path):
-                warnings.warn(f"Warning: A log directory for this model group name ({model_group_name}) already exists but you are not loading it.")
+                warnings.warn("Warning: A log directory for this model group name ({}) already exists but you are not loading it.".format(model_group_name))
             else:
                 os.makedirs(os.path.realpath(self.model_group_path))
             
@@ -402,7 +402,7 @@ class TFT_Predictor(BasePredictorModel):
 
 
 
-    def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, **kwargs) -> TemporalFusionTransformer:
+    def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs) -> TemporalFusionTransformer:
         """Create a new TFT model object with format given by provided TimeSeriesDataSet.
 
         Args:
@@ -410,6 +410,8 @@ class TFT_Predictor(BasePredictorModel):
             model_type (str): Type of variable predicted by model, one of
             ['load','solar','pricing','carbon'].
             train_dataset (TimeSeriesDataSet): Dataset object used to format model.
+            pre_confirm (bool): Whether to skip overwrite warning step (e.g. during
+            programatic model creation).
         
         NOTE: If the specified model name already exists within the model group,
         the data for the existing model will be overwritten when the new model is
@@ -427,10 +429,11 @@ class TFT_Predictor(BasePredictorModel):
         model_path = os.path.join(self.model_group_path,model_type,model_name)
 
         if os.path.exists(model_path):
-            warnings.warn(f"Warning: A logs directory already exists for the model name `{model_name}`. By continuing you will overwrite this model.")
-            if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
-                print("Aborting model creation.")
-                return
+            warnings.warn("Warning: A logs directory already exists for the model name `{}`. By continuing you will overwrite this model.".format(model_name))
+            if pre_confirm:
+                if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
+                    print("Aborting model creation.")
+                    return
             else:
                 shutil.rmtree(model_path)
 
@@ -454,7 +457,7 @@ class TFT_Predictor(BasePredictorModel):
         if model_type in ['load','solar']:
             self.model_names[model_type].append(model_name)
         else:
-            warnings.warn(f"Warning: f{model_type} model replaced.")
+            warnings.warn("Warning: f{} model replaced.".format(model_type))
             self.model_names[model_type] = model_name
         self.models[model_type][model_name] = tft
 
