@@ -34,7 +34,7 @@ def main(model_group_name, model_type, model_name, building_index,
     # construct inference dataset
     batch_size = 128
     n_workers = 4 if os.cpu_count() >= 8 else int(os.cpu_count()/2)
-    dataset_ds, = TFT_group.format_CityLearn_datasets([dataset_path], model_type=model_type, building_index=building_index)
+    dataset_ds, = TFT_group.format_CityLearn_datasets([dataset_path], model_type=model_type, model_name=model_name, building_index=building_index)
     dataset_dl = dataset_ds.to_dataloader(train=False, batch_size=batch_size, num_workers=n_workers)
 
     # perform inference

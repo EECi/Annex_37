@@ -19,7 +19,7 @@ def main(model_group_name, model_type, model_name, building_index, train_path, v
         raise ValueError("`model_type` argument must be one of ('load','solar','pricing','carbon').")
 
     # construct train & validate datasets
-    train_ds,val_ds = TFT_group.format_CityLearn_datasets([train_path,val_path], model_type=model_type, building_index=building_index)
+    train_ds,val_ds = TFT_group.format_CityLearn_datasets([train_path,val_path], model_type=model_type, model_name=model_name, building_index=building_index)
 
     # continue training on specified model
     TFT_group.train_model(model_name,model_type,train_ds,val_ds)

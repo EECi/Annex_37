@@ -286,6 +286,7 @@ class TFT_Predictor(BasePredictorModel):
         self,
         CityLearn_dataset_dirpaths,
         model_type,
+        model_name: str = None,
         building_index: int = None,
         ) -> List[TimeSeriesDataSet]:
         """Format CityLearn datasets into `pytorch_lightning.TimeSeriesDataSet`
@@ -306,6 +307,10 @@ class TFT_Predictor(BasePredictorModel):
             paths to CityLearn datasets to be formatted.
             model_type (str): Type of prediction variable to construct dataset
             for, one of ['load','solar','pricing','carbon'].
+            model_name (str): Name of model to construct dataset for. Used when the
+            model already exists. Timeseries dataset parameters for encoding and
+            scaling the input data are collected from file to ensure dataset
+            consistency. ALWAYS USE unless creating a new model.
             building_index (int, optional): Index of building in CityLearnEnv.buildings
             of target variable for dataset. Defaults to None. Required if target
             variable is building specified, i.e. `model_type` is 'load' or 'solar'.
@@ -317,9 +322,17 @@ class TFT_Predictor(BasePredictorModel):
         # use construction from_dataset for datasets after first
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
+        assert model_name in self.model_names[model_type], f"Model {model_name} of type {model_type} not loaded into predictor."
 
         if (model_type in ['load','solar']) and (building_index == None):
             raise ValueError(f"Must supply `building_index` to construct {model_type} dataset from CityLearn data.")
+        
+        if model_name is not None:
+            dataset_params_path = os.path.join(self.model_group_path,model_type,model_name,'timeseries_dataset_params.json')
+            with open(dataset_params_path,'r') as json_file:
+                tsds_params = json.load(json_file)
+        else:
+            warnings.warn("Warning: Creating new TimeSeriesDataSet object with new encodings/scalings. Note, only to be used for training a new model.")
 
         building_fname_pattern = 'UCam_Building*.csv'
 
@@ -366,10 +379,13 @@ class TFT_Predictor(BasePredictorModel):
             elif model_type == 'carbon':
                 data_df[self.carbon_col_name] = env.buildings[0].carbon_intensity.carbon_intensity
 
-            if i == 0:
-                timeseries_dataset = self.make_TimeSeriesDataSet(data_df,target,time_varying_unknown_reals)
+            if model_name is not None: # make dataset from params of original train set
+                timeseries_dataset = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
             else:
-                timeseries_dataset = TimeSeriesDataSet.from_dataset(ts_datasets[0], data_df)
+                if i == 0: # create new TimeSeriesDataSet (and encoding/scaling)
+                    timeseries_dataset = self.make_TimeSeriesDataSet(data_df,target,time_varying_unknown_reals)
+                else: # make dataset from params of first data set
+                    timeseries_dataset = TimeSeriesDataSet.from_dataset(ts_datasets[0], data_df)
 
             ts_datasets.append(timeseries_dataset)
 
@@ -434,6 +450,14 @@ class TFT_Predictor(BasePredictorModel):
         self.models[model_type][model_name] = tft
 
         os.makedirs(os.path.realpath(model_path))
+
+        # save timeseries dataset parameters in model dir
+        # NOTE!!!: this defines the variable scaling and encoding and so must
+        # be used to construct all following datasets applied to the model
+        tsds_params = train_dataset.get_parameters()
+        dataset_params_path = os.path.join(model_path,'timeseries_dataset_params.json')
+        with open(dataset_params_path,'w') as json_file:
+            json.dump(tsds_params, json_file)
 
         return tft
 
