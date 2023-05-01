@@ -1,4 +1,4 @@
-"""Implementation of TFT predictor model class."""
+"""Implementation of N-HiTS predictor model class."""
 
 from ..TFPredictor import TF_Predictor
 from pytorch_forecasting import NHiTS, QuantileLoss
