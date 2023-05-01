@@ -45,4 +45,3 @@ class NHiTS_Predictor(TF_Predictor):
             time_varying_unknown_reals = [self.carbon_col_name]
 
         return time_varying_unknown_reals
-
