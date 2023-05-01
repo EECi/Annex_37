@@ -14,7 +14,7 @@ import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor
+from models import ExamplePredictor, DMSPredictor, TFTPredictor
 
 
 def evaluate(predictor,
