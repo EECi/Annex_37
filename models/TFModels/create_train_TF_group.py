@@ -3,7 +3,7 @@
 import os
 import json
 import warnings
-from models import TFT_Predictor
+from models import TFT_Predictor, NHiTS_Predictor
 
 
 def main(model_group_name, model_architecture, predictor_model, UCam_ids, train_path, val_path):
