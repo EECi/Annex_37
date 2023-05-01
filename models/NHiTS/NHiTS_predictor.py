@@ -19,7 +19,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.tuner.tuning import Tuner
-from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer, QuantileLoss
+from pytorch_forecasting import TimeSeriesDataSet, NHiTS, QuantileLoss
 
 # filer warnings: mostly object reload & numpy deprecation warnings
 import warnings
@@ -27,18 +27,18 @@ warnings.filterwarnings(action='ignore',module=r'pytorch_forecasting')
 
 
 
-class TFT_Predictor(BasePredictorModel):
-    """Implementation of TFT-based prediction model for the CityLearn LinMPC controller.
+class NHiTS_Predictor(BasePredictorModel):
+    """Implementation of N-HiTS-based prediction model for the CityLearn LinMPC controller.
 
     The provided class is used to perform the following activities:
-    - load collections of pre-trained TFT models (all models required
+    - load collections of pre-trained N-HiTS models (all models required
         for prediction) - via `__init__` method.
     - format CityLearn datasets - via `format_CityLearn_datasets` method.
     - create new TFT models - via `new_model` method.
     - train TFT models on a provided dataset - via `train_model` method.
     - perform prediction inference - via `compute_forecast` method.
 
-    A `TFT_Predictor` object contains/loads a 'model group', which is the
+    A `NHiTS_Predictor` object contains/loads a 'model group', which is the
     collection of TFT modes required to produce all necessary predictions
     for the LinMPC controller.
     The parameters:
@@ -86,7 +86,7 @@ class TFT_Predictor(BasePredictorModel):
         # Specify model parameters.
         self.model_types = ['load','solar','pricing','carbon']
         self.model_group_name = model_group_name
-        self.model_group_path = os.path.join('models','TFT','resources','model_logs',model_group_name)
+        self.model_group_path = os.path.join('models','N-HiTS','resources','model_logs',model_group_name)
 
         # Specify column name variables for data formatting.
         self.time_id_col_name = 'time_idx'
@@ -200,7 +200,7 @@ class TFT_Predictor(BasePredictorModel):
         })
 
 
-    def load_TFT_from_model_dir_path(self, model_path) -> TemporalFusionTransformer:
+    def load_NHiTS_from_model_dir_path(self, model_path) -> NHiTS:
         """Load best version of saved model using path to directory.
 
         NOTE: `best_model.json` contains a dict with one key `rel_path`, whose values is a list
@@ -212,7 +212,7 @@ class TFT_Predictor(BasePredictorModel):
             model_path (Union[str, os.Path]): path to model log directory of desired model.
 
         Returns:
-            TemporalFusionTransformer: Loaded model object (loaded from best checkpoint file).
+            NHiTS: Loaded model object (loaded from best checkpoint file).
         """
 
         assert os.path.exists(model_path), f"The requested model `{model_path}` does not exist."
@@ -225,7 +225,7 @@ class TFT_Predictor(BasePredictorModel):
             best_model_chkpt = json.load(json_file)['rel_path']
         best_model_path = os.path.join(model_path, *best_model_chkpt)
 
-        return TemporalFusionTransformer.load_from_checkpoint(best_model_path)
+        return NHiTS.load_from_checkpoint(best_model_path)
 
 
 
@@ -402,7 +402,7 @@ class TFT_Predictor(BasePredictorModel):
 
 
 
-    def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs) -> TemporalFusionTransformer:
+    def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs) -> NHiTS:
         """Create a new TFT model object with format given by provided TimeSeriesDataSet.
 
         Args:
@@ -439,10 +439,10 @@ class TFT_Predictor(BasePredictorModel):
 
         # Set default kwargs.
         # architecture hyperparameters
-        if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 48
-        if 'attention_head_size' not in kwargs.keys(): kwargs['attention_head_size'] = 4
+        if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 512
+        if 'weight_decay' not in kwargs.keys(): kwargs['weight_decay'] = 1e-2
+        if 'backcast_loss_ratio' not in kwargs.keys(): kwargs['backcast_loss_ratio'] = 0.0
         if 'dropout' not in kwargs.keys(): kwargs['dropout'] = 0.1
-        #if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
         # loss metric to optimize
         if 'loss' not in kwargs.keys(): kwargs['loss'] = QuantileLoss()
         # set optimizer
@@ -451,7 +451,7 @@ class TFT_Predictor(BasePredictorModel):
         if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
 
         # initialise TFT model from train_dataset specification
-        tft = TemporalFusionTransformer.from_dataset(train_dataset,**kwargs)
+        nhits = NHiTS.from_dataset(train_dataset,**kwargs)
 
         # set model
         if model_type in ['load','solar']:
@@ -459,7 +459,7 @@ class TFT_Predictor(BasePredictorModel):
         else:
             warnings.warn("Warning: f{} model replaced.".format(model_type))
             self.model_names[model_type] = model_name
-        self.models[model_type][model_name] = tft
+        self.models[model_type][model_name] = nhits
 
         os.makedirs(os.path.realpath(model_path))
 
@@ -471,7 +471,7 @@ class TFT_Predictor(BasePredictorModel):
         with open(dataset_params_path,'wb') as pkl_file:
             pickle.dump(tsds_params, pkl_file)
 
-        return tft
+        return nhits
 
 
     def train_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, val_dataset: TimeSeriesDataSet, **kwargs) -> None:
