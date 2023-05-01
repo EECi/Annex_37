@@ -17,7 +17,6 @@ class TFT_Predictor(TF_Predictor):
             'hidden_size': 48,
             'attention_head_size': 4,
             'dropout': 0.1,
-            #if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
             # loss metric to optimize
             'loss': QuantileLoss(),
             # set optimizer

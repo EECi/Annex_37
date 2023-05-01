@@ -17,7 +17,6 @@ class DeepAR_Predictor(TF_Predictor):
             'hidden_size': 64,
             'rnn_layers': 3,
             'dropout': 0.1,
-            #if 'hidden_continuous_size' not in kwargs.keys(): kwargs['hidden_continuous_size'] = 16
             # loss metric to optimize
             'loss': NormalDistributionLoss(),
             # set optimizer
