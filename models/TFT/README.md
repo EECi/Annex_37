@@ -46,6 +46,14 @@ TFT_Predictor.initialise_forecasting(tau, env)
 ```
 where `tau` is the desired forecasting horizon, and `env` is the `CityLearnEnv` object on which prediction is being done. This must be done *after* all models are loaded into the object.
 
+Additionally, during prediction/inference the time step of the `CityLearnEnv` object must be pass as an extra argument so the appropriate time information can be gathered,
+
+```
+TFT_Predictor.compute_forecast(observations, env.time_step)
+```
+
+<br>
+
 ## Directory structure
 
 The model directory contains the following:
