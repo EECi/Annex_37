@@ -1,0 +1,5 @@
+# Temporal Fusion Transformer (TFT)
+
+The [Temporal Fusion Transformer (TFT)](https://arxiv.org/pdf/1912.09363.pdf) is an attention based neural architecture for multi-horizon forecasting. It combines information from multiple data streams to enhance prediction capabilities, and selects the most important features both over input variables and time using its attention mechanism. Further, this attention mechanism is highly interpretable and can provide insight into the importance of different variables for prediction and the underlying temporal trends in the target variable data. More information on the model is available in [this blog post](https://ai.googleblog.com/2021/12/interpretable-deep-learning-for-time.html).
+
+This model wraps the [TFT implementation from the PyTorch Forecasting library](https://pytorch-forecasting.readthedocs.io/en/stable/api/pytorch_forecasting.models.temporal_fusion_transformer.TemporalFusionTransformer.html) for use in the CityLearn LinMPC task. An example usage of the model from the docs is available [here](https://pytorch-forecasting.readthedocs.io/en/stable/tutorials/stallion.html).
