@@ -679,11 +679,12 @@ class TFT_Predictor(BasePredictorModel):
 
             # perform load forecasting
             predicted_loads = []
-            for j,model_name in enumerate(self.model_names['load'].values()):
-                model = self.models['load'][model_name]
+            model_type = 'load'
+            for j,model_name in enumerate(self.model_names[model_type]):
+                model = self.models[model_type][model_name]
                 tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
                 data_df = base_df.copy()
-                data_df[self.load_col_name] = np.append(self.buffer['load'][j][-self.L:],np.zeros(self.T))
+                data_df[self.load_col_name] = np.append(self.buffer[model_type][j][-self.L:],np.zeros(self.T))
                 data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
                 load_prediction = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_loads.append(load_prediction)
@@ -691,31 +692,34 @@ class TFT_Predictor(BasePredictorModel):
 
             # perform solar forecasting
             predicted_pv_gens = []
-            for j,model_name in enumerate(self.model_names['solar'].values()):
-                model = self.models['load'][model_name]
+            model_type = 'solar'
+            for j,model_name in enumerate(self.model_names[model_type]):
+                model = self.models[model_type][model_name]
                 tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
                 data_df = base_df.copy()
-                data_df[self.solar_col_name] = np.append(self.buffer['solar'][j][-self.L:],np.zeros(self.T))
+                data_df[self.solar_col_name] = np.append(self.buffer[model_type][j][-self.L:],np.zeros(self.T))
                 data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
                 solar_prediction = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
                 predicted_pv_gens.append(solar_prediction)
             predicted_pv_gens = np.array(predicted_pv_gens)
 
             # perform pricing forecasting
-            model_name = list(self.model_names['pricing'].values())[0]
-            model = self.models['pricing'][model_name]
+            model_type = 'pricing'
+            model_name = self.model_names[model_type]
+            model = self.models[model_type][model_name]
             tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
             data_df = base_df.copy()
-            data_df[self.pricing_col_name] = np.append(self.buffer['pricing'][-self.L:],np.zeros(self.T))
+            data_df[self.pricing_col_name] = np.append(self.buffer[model_type][-self.L:],np.zeros(self.T))
             data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
             predicted_pricing = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
 
             # perform carbon forecasting
-            model_name = list(self.model_names['carbon'].values())[0]
-            model = self.models['carbon'][model_name]
+            model_type = 'carbon'
+            model_name = self.model_names[model_type]
+            model = self.models[model_type][model_name]
             tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
             data_df = base_df.copy()
-            data_df[self.carbon_col_name] = np.append(self.buffer['carbon'][-self.L:],np.zeros(self.T))
+            data_df[self.carbon_col_name] = np.append(self.buffer[model_type][-self.L:],np.zeros(self.T))
             data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
             predicted_carbon = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
 
