@@ -18,7 +18,8 @@ def main(model_group_name, model_type, model_name, building_index,
     ):
 
     # load model group - note ordering does not matter
-    NHiTS_group = NHiTS_Predictor(model_group_name, load='group')
+    #NHiTS_group = NHiTS_Predictor(model_group_name, load='group')
+    NHiTS_group = NHiTS_Predictor(model_group_name, model_names={'load':['load_5'],'solar':[],'pricing':'../load/load_5','carbon':'../load/load_5'}, load='indiv')
 
     # check requested model is valid
     if model_type in ['load','solar']:
@@ -128,11 +129,11 @@ def main(model_group_name, model_type, model_name, building_index,
 
         # get encoder length, compute attention
         encoder_length = x["encoder_lengths"][0]
-        interpretation = nhits.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
+        # interpretation = nhits.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
 
         # outrageously hacky way of computing prediction loss
         fig, dummy_ax = plt.subplots()
-        nhits.plot_prediction(x, raw_predictions, idx=idx, plot_attention=False, add_loss_to_title=True, ax=dummy_ax)
+        nhits.plot_prediction(x, raw_predictions, idx=idx, add_loss_to_title=True, ax=dummy_ax)
         prediction_loss = float(dummy_ax.get_title().split(' ')[1])
         plt.close(fig)
         del fig, dummy_ax
@@ -198,14 +199,14 @@ def main(model_group_name, model_type, model_name, building_index,
                 fill='tonexty'
             ),
 
-            go.Scatter( # encoder attention
-                x=[-1*i for i in reversed(range(1,encoder_length+1))],
-                y=interpretation['attention'][0,-encoder_length:],
-                mode="lines",
-                line=dict(color="rgba(63, 155, 11, 0.5)", width=2),
-                yaxis='y3',
-                name="Attention"
-            ),
+            # go.Scatter( # encoder attention
+            #     x=[-1*i for i in reversed(range(1,encoder_length+1))],
+            #     y=interpretation['attention'][0,-encoder_length:],
+            #     mode="lines",
+            #     line=dict(color="rgba(63, 155, 11, 0.5)", width=2),
+            #     yaxis='y3',
+            #     name="Attention"
+            # ),
             go.Scatter( # decoder target
                 x=list(range(max_prediction_length)),
                 y=x['decoder_target'][idx],
@@ -314,8 +315,8 @@ if __name__ == '__main__':
 
     # specify nhits model to be used for inference
     model_group_name = 'test'
-    model_type = 'carbon' #'load'
-    model_name = 'carbon' #f'load_{UCam_ids[0]}'
+    model_type = 'load'
+    model_name = f'load_{UCam_ids[0]}'
     building_index = 0
 
     # specify scope of inference
@@ -326,4 +327,4 @@ if __name__ == '__main__':
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore',module=r'pytorch_lightning')
 
-        main(model_group_name, model_type, model_name, building_index, dataset_path, idx_start, idx_end) # val_max=300
+        main(model_group_name, model_type, model_name, building_index, dataset_path, idx_start, idx_end, val_max=300)

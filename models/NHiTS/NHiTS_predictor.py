@@ -1,4 +1,4 @@
-"""Implementation of TFT predictor model class."""
+"""Implementation of N-HiTS predictor model class."""
 
 import os
 import glob
@@ -34,12 +34,12 @@ class NHiTS_Predictor(BasePredictorModel):
     - load collections of pre-trained N-HiTS models (all models required
         for prediction) - via `__init__` method.
     - format CityLearn datasets - via `format_CityLearn_datasets` method.
-    - create new TFT models - via `new_model` method.
-    - train TFT models on a provided dataset - via `train_model` method.
+    - create new N-HiTS models - via `new_model` method.
+    - train N-HiTS models on a provided dataset - via `train_model` method.
     - perform prediction inference - via `compute_forecast` method.
 
     A `NHiTS_Predictor` object contains/loads a 'model group', which is the
-    collection of TFT modes required to produce all necessary predictions
+    collection of N-HiTS models required to produce all necessary predictions
     for the LinMPC controller.
     The parameters:
     - 'encoder window' (L)
@@ -64,7 +64,8 @@ class NHiTS_Predictor(BasePredictorModel):
         L: int = 72,
         T: int = 48,
         model_names: Union[List, Dict] = None,
-        load: Union[str, bool] = 'group'
+        load: Union[str, bool] = 'group',
+        seed = 42
         ) -> None:
         """Create model group object, loading models from file or initialising
         empty model group to be populated later.
@@ -81,12 +82,13 @@ class NHiTS_Predictor(BasePredictorModel):
             load (Union[str, bool], optional): Whether to load a model group ('group'),
             load a custom selection of models ('indiv') as specified in the `model_names`
             dict, or not load any models and initialise a blank model group. Defaults to 'group'.
+            seed (int): statistical seed for training.
         """
 
         # Specify model parameters.
         self.model_types = ['load','solar','pricing','carbon']
         self.model_group_name = model_group_name
-        self.model_group_path = os.path.join('models','N-HiTS','resources','model_logs',model_group_name)
+        self.model_group_path = os.path.join('models','NHiTS','resources','model_logs',model_group_name)
 
         # Specify column name variables for data formatting.
         self.time_id_col_name = 'time_idx'
@@ -183,7 +185,7 @@ class NHiTS_Predictor(BasePredictorModel):
         else:
             raise ValueError("`load` argument must be: 'group', 'indiv', or False")
 
-        pl.seed_everything(42) # seed pytorch_lightning for reproducibility
+        pl.seed_everything(seed=seed) # seed pytorch_lightning for reproducibility
 
 
     def load(self) -> None:
@@ -193,10 +195,10 @@ class NHiTS_Predictor(BasePredictorModel):
 
         # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays
         self.models = {
-            model_type: {model_name: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,model_name)) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
+            model_type: {model_name: self.load_NHiTS_from_model_dir_path(os.path.join(self.model_group_path,model_type,model_name)) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
         }
         self.models.update({
-            model_type: {self.model_names[model_type]: self.load_TFT_from_model_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
+            model_type: {self.model_names[model_type]: self.load_NHiTS_from_model_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
         })
 
 
@@ -349,11 +351,11 @@ class NHiTS_Predictor(BasePredictorModel):
         if model_type == 'load':
             target = self.load_col_name
             ts_name = 'l'
-            time_varying_unknown_reals = [self.load_col_name,self.temp_col_name]
+            time_varying_unknown_reals = [self.load_col_name]
         elif model_type == 'solar':
             target = self.solar_col_name
             ts_name = 's'
-            time_varying_unknown_reals = [self.solar_col_name,self.dif_irad_col_name,self.dir_irad_col_name]
+            time_varying_unknown_reals = [self.solar_col_name]
         elif model_type == 'pricing':
             target = self.pricing_col_name
             ts_name = 'p'
@@ -403,7 +405,7 @@ class NHiTS_Predictor(BasePredictorModel):
 
 
     def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs) -> NHiTS:
-        """Create a new TFT model object with format given by provided TimeSeriesDataSet.
+        """Create a new N-HiTS model object with format given by provided TimeSeriesDataSet.
 
         Args:
             model_name (str): Name of model. Sets name of model log directory.
@@ -439,18 +441,18 @@ class NHiTS_Predictor(BasePredictorModel):
 
         # Set default kwargs.
         # architecture hyperparameters
-        if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 512
+        if 'hidden_size' not in kwargs.keys(): kwargs['hidden_size'] = 128
         if 'weight_decay' not in kwargs.keys(): kwargs['weight_decay'] = 1e-2
         if 'backcast_loss_ratio' not in kwargs.keys(): kwargs['backcast_loss_ratio'] = 0.0
         if 'dropout' not in kwargs.keys(): kwargs['dropout'] = 0.1
         # loss metric to optimize
         if 'loss' not in kwargs.keys(): kwargs['loss'] = QuantileLoss()
         # set optimizer
-        if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'adam'
+        if 'optimizer' not in kwargs.keys(): kwargs['optimizer'] = 'AdamW'
         # optimizer parameters
         if 'reduce_on_plateau_patience' not in kwargs.keys(): kwargs['reduce_on_plateau_patience'] = 3
 
-        # initialise TFT model from train_dataset specification
+        # initialise N-HiTS model from train_dataset specification
         nhits = NHiTS.from_dataset(train_dataset,**kwargs)
 
         # set model

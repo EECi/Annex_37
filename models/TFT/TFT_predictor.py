@@ -39,7 +39,7 @@ class TFT_Predictor(BasePredictorModel):
     - perform prediction inference - via `compute_forecast` method.
 
     A `TFT_Predictor` object contains/loads a 'model group', which is the
-    collection of TFT modes required to produce all necessary predictions
+    collection of TFT models required to produce all necessary predictions
     for the LinMPC controller.
     The parameters:
     - 'encoder window' (L)
@@ -64,7 +64,8 @@ class TFT_Predictor(BasePredictorModel):
         L: int = 72,
         T: int = 48,
         model_names: Union[List, Dict] = None,
-        load: Union[str, bool] = 'group'
+        load: Union[str, bool] = 'group',
+        seed = 42
         ) -> None:
         """Create model group object, loading models from file or initialising
         empty model group to be populated later.
@@ -81,6 +82,7 @@ class TFT_Predictor(BasePredictorModel):
             load (Union[str, bool], optional): Whether to load a model group ('group'),
             load a custom selection of models ('indiv') as specified in the `model_names`
             dict, or not load any models and initialise a blank model group. Defaults to 'group'.
+            seed (int): statistical seed for training.
         """
 
         # Specify model parameters.
@@ -183,7 +185,7 @@ class TFT_Predictor(BasePredictorModel):
         else:
             raise ValueError("`load` argument must be: 'group', 'indiv', or False")
 
-        pl.seed_everything(42) # seed pytorch_lightning for reproducibility
+        pl.seed_everything(seed=seed) # seed pytorch_lightning for reproducibility
 
 
     def load(self) -> None:

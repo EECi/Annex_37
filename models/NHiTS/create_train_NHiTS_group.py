@@ -9,7 +9,7 @@ from models.NHiTS.NHiTS_predictor import NHiTS_Predictor
 def main(model_group_name, UCam_ids, train_path, val_path):
 
     # safety check the model creation
-    model_group_path = os.path.join('models','TFT','resources','model_logs',model_group_name)
+    model_group_path = os.path.join('models','NHiTS','resources','model_logs',model_group_name)
     if os.path.exists(model_group_path):
         warnings.warn("Warning: Log directories already exist for the model group `{}`. By continuing you will overwrite this model.".format(model_group_path))
         if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
