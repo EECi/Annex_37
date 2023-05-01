@@ -55,7 +55,10 @@ TFT_Predictor.compute_forecast(observations, env.time_step)
 ## Directory structure
 
 The model directory contains the following:
-- `TFT_predictor.py`: contains implementation of TFT model wrapper class
+- `TFT` directory: ...
+- `TFT/TFT_predictor.py`: contains implementation of TFT model wrapper class
+- `NHiTS` directory: ...
+- `NHiTS/NHiTS_predictor.py`: ...
 - `resources/model_logs`: directory containing save files for pre-trained models
 - `create_train_TFT_group.py`: example script showing how to create a new TFT model group, train it on a specified dataset, and save it to `model_logs`
 - `train_TFT_model.py`: example script showing how to load a model group and continue training for a specified model within it
