@@ -54,7 +54,7 @@ class TF_Predictor(BasePredictorModel):
     NOTE: The order in which the models are stored in the `self.models` dict
     (which is the same as in `self.model_names`) specifies the order in which
     the models are used for prediction. So the index of the model must be the
-    same as the index of the buildling you want to apply it to for prediction.
+    same as the index of the building you want to apply it to for prediction.
     EXTRA NOTE: When loading model groups implicitly be careful about the order
     in which models are loaded, as this may not be the way they display in your
     directory viewer. The ordering of strings is... complicated.
@@ -73,7 +73,7 @@ class TF_Predictor(BasePredictorModel):
 
         Args:
             model_group_name (str, optional): Name of model group. Defaults to 'default'.
-            Gives name of model log diretory for model group.
+            Gives name of model log directory for model group.
             L (int, optional): Model group encoder window parameter. Defaults to 72.
             T (int, optional): Model group planning horizon parameter. Defaults to 48.
             model_names (Union[List, Dict], optional): Dictionary of names of models of
@@ -88,6 +88,7 @@ class TF_Predictor(BasePredictorModel):
 
         if not hasattr(self, 'model_architecture'): raise NotImplementedError # must be defined in child model class
         if not hasattr(self, 'pytorch_forecasting_model_class'): raise NotImplementedError # must be defined in child model class
+        if not hasattr(self, 'model_constructor_kwargs'): raise NotImplementedError # must be defined in child model class
 
         # Specify model parameters.
         self.model_types = ['load','solar','pricing','carbon']
@@ -211,7 +212,7 @@ class TF_Predictor(BasePredictorModel):
 
         NOTE: `best_model.json` contains a dict with one key `rel_path`, whose values is a list
         of the relative path (strings) to the checkpoint file of the best version of that model.
-        This file is used to conventiently track the best version of the model trained so far
+        This file is used to conveniently track the best version of the model trained so far
         for ease of loading and continuation of training.
 
         Args:
@@ -236,7 +237,7 @@ class TF_Predictor(BasePredictorModel):
 
 
     def _reformat_df(self,df,ts_name,tv_cats):
-        """Reformat CityLearn dataset `pd.DataFrame` for construcction into
+        """Reformat CityLearn dataset `pd.DataFrame` for construction into
         `pytorch_lightning.TimeSeriesDataSet`.
         Converts categoricals to strs and adds timeseries id column.
 
@@ -421,15 +422,6 @@ class TF_Predictor(BasePredictorModel):
         return ts_datasets
 
 
-    @abstractmethod
-    def _set_default_model_kwargs(kwargs):
-        """Set default model specification kwargs."""
-
-        # kwarg group description
-        if 'key' not in kwargs.keys(): kwargs['key'] = ...
-
-        return kwargs
-
 
     def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs):
         """Create a new TFT model object with format given by provided TimeSeriesDataSet.
@@ -466,8 +458,10 @@ class TF_Predictor(BasePredictorModel):
             else:
                 shutil.rmtree(model_path)
 
-        # set default model construction args
-        kwargs = self._set_default_model_kwargs(kwargs)
+        # set default model construction kwargs
+        for key in self.model_constructor_kwargs:
+            if key not in kwargs.keys():
+                kwargs[key] = self.model_constructor_kwargs[key]
 
         # initialise model from train_dataset specification
         model = self.pytorch_forecasting_model_class.from_dataset(train_dataset,**kwargs)
