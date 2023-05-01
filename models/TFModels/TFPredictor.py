@@ -12,7 +12,7 @@ import pandas as pd
 
 from citylearn.citylearn import CityLearnEnv
 from abc import abstractmethod
-from models.base_predictor_model import BasePredictorModel
+from models import BasePredictorModel
 
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer
