@@ -58,7 +58,7 @@ if __name__ == '__main__':
     with open(os.path.join(train_path,'metadata_ext.json')) as json_file:
         UCam_ids = json.load(json_file)["UCam_building_ids"]
 
-    # set TFT model group parameters
+    # set model group parameters
     model_group_name = 'test'
     model_architecture = 'TFT'
     predictor_model = TFT_Predictor
