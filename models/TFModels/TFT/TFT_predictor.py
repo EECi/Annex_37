@@ -1,9 +1,6 @@
 """Implementation of TFT predictor model class."""
 
 from ..TFPredictor import TF_Predictor
-
-from typing import Any, List, Dict, Union
-
 from pytorch_forecasting import TemporalFusionTransformer, QuantileLoss
 
 
