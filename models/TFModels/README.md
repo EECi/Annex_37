@@ -69,5 +69,5 @@ The model directory contains the following:
 
 Example scripts provided should be run using the following syntax,
 ```
-python3 -m models.TFT.create_train_TFT_group
+python3 -m models.TFModels.TFT.create_train_TFT_group
 ```
