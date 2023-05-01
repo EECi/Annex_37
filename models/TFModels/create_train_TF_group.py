@@ -1,4 +1,4 @@
-"""Create and train TFT model group."""
+"""Create and train model group."""
 
 import os
 import json
