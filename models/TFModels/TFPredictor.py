@@ -424,7 +424,7 @@ class TF_Predictor(BasePredictorModel):
 
 
     def new_model(self, model_name: str, model_type: str, train_dataset: TimeSeriesDataSet, pre_confirm=False, **kwargs):
-        """Create a new TFT model object with format given by provided TimeSeriesDataSet.
+        """Create a new model object with format given by provided TimeSeriesDataSet.
 
         Args:
             model_name (str): Name of model. Sets name of model log directory.
@@ -439,7 +439,7 @@ class TF_Predictor(BasePredictorModel):
         created.
 
         Returns:
-            TemporalFusionTransformer: Created model.
+            instance of `self.pytorch_forecasting_model_class`: Created model.
         """
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
