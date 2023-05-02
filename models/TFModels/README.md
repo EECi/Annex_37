@@ -5,6 +5,7 @@
 ## Package requirements
 
 The top-level package required to use this model are provided in `requirements.txt`, which can be install using the following command,
+
 ```
 pip install -r models/TFT/requirements.txt
 ```
@@ -12,9 +13,11 @@ pip install -r models/TFT/requirements.txt
 Additionally [`numba`](https://numba.pydata.org/) can be `pip` installed to improve computation speeds.
 
 If you would like to use CUDA to accelerate model training & evaluation, please run the following command *after* installing the base requirements,
+
 ```
-pip3 install torch==1.13 --index-url https://download.pytorch.org/whl/cu117
+pip install torch==1.13.0+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
 ```
+
 see [this link](https://pytorch.org/get-started/locally/) for more details.
 
 ## Model organisation
@@ -26,10 +29,12 @@ The saved data for a trained model group is stored in a directory within `resour
 ## Loading a predictor
 
 Models can be loaded in a number of ways, however the recommended method is to load a complete model group with standard model naming during initialisation of the model group object via the following syntax,
+
 ```
 UCam_ids = [...] # your building ids
 TFT_group = TFT_Predictor(model_group_name, model_names=UCam_ids, load='group')
 ```
+
 This loads models contained in the `model_logs/{model_group_name}` directory following the standard naming convention, corresponding to the ordered list of building ids passed as an argument. This method is preferred as it explicitly specifies the order of models loaded, and hence used during prediction.
 The order of the models in the `TFT_Predictor.model_names` dict determines the order in which they are applied during prediction, and corresponds to the order of building objects in the `CityLearnEnv.buildings` list, i.e. `TFT_Predictor.model_names['load'][0]` is used to predict electrical load for building `CityLearnEnv.buildings[0]`.
 **Be careful to check that the order of models used in your model group is as desired for prediction.**
@@ -39,9 +44,11 @@ For more info on loading models see the implementation of the `TFT_Predictor.__i
 ## Using the predictor
 
 Before prediction can be performed, the model must be set into prediction mode using the following command,
+
 ```
 TFT_Predictor.initialise_forecasting(tau, env)
 ```
+
 where `tau` is the desired forecasting horizon, and `env` is the `CityLearnEnv` object on which prediction is being done. This must be done *after* all models are loaded into the object.
 
 Additionally, during prediction/inference the time step of the `CityLearnEnv` object must be pass as an extra argument so the appropriate time information can be gathered,
@@ -55,6 +62,7 @@ TFT_Predictor.compute_forecast(observations, env.time_step)
 ## Directory structure
 
 The model directory contains the following:
+
 - `TFT` directory: ...
 - `TFT/TFT_predictor.py`: contains implementation of TFT model wrapper class
 - `NHiTS` directory: ...
@@ -68,6 +76,7 @@ The model directory contains the following:
 <br>
 
 Example scripts provided should be run using the following syntax,
+
 ```
 python3 -m models.TFModels.TFT.create_train_TFT_group
 ```
