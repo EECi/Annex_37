@@ -24,6 +24,7 @@ from pytorch_forecasting import TimeSeriesDataSet
 # filer warnings: mostly object reload & numpy deprecation warnings
 import warnings
 warnings.filterwarnings(action='ignore',module=r'pytorch_forecasting')
+warnings.filterwarnings(action='ignore',module=r'pytorch_lightning')
 
 
 
@@ -523,7 +524,7 @@ class TF_Predictor(BasePredictorModel):
 
         # Convert datasets to dataloaders for training.
         batch_size = 128
-        n_workers = 4 if os.cpu_count() >= 8 else int(os.cpu_count()/2)
+        n_workers = min(os.cpu_count(),4)
         train_dataloader = train_dataset.to_dataloader(train=True, batch_size=batch_size, num_workers=n_workers)
         val_dataloader = val_dataset.to_dataloader(train=False, batch_size=batch_size, num_workers=n_workers)
 
