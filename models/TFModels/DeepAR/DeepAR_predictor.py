@@ -32,9 +32,9 @@ class DeepAR_Predictor(TF_Predictor):
         """Specify required time varying unknown reals for model."""
 
         if model_type == 'load':
-            time_varying_unknown_reals = [self.load_col_name,self.temp_col_name]
+            time_varying_unknown_reals = [self.load_col_name]
         elif model_type == 'solar':
-            time_varying_unknown_reals = [self.solar_col_name,self.dif_irad_col_name,self.dir_irad_col_name]
+            time_varying_unknown_reals = [self.solar_col_name]
         elif model_type == 'pricing':
             time_varying_unknown_reals = [self.pricing_col_name]
         elif model_type == 'carbon':
