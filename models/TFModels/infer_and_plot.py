@@ -6,7 +6,7 @@ import numpy as np
 
 import warnings
 
-from models import TFT_Predictor
+from models import TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
 
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -130,7 +130,8 @@ def main(
 
         # get encoder length, compute attention
         encoder_length = x["encoder_lengths"][0]
-        interpretation = model.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
+        if model_architecture in ['TFT']:
+            interpretation = model.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
 
         # outrageously hacky way of computing prediction loss
         fig, dummy_ax = plt.subplots()
@@ -297,6 +298,7 @@ def main(
         )
     )
 
+    print("Rendering plot...")
     ply_plot(
         fig,
         filename=save_path,
@@ -319,11 +321,11 @@ if __name__ == '__main__':
 
     # specify model to be used for inference
     model_group_name = 'test'
-    model_architecture = 'model'
-    predictor_model = TFT_Predictor
+    model_architecture = 'DeepAR'
+    predictor_model = DeepAR_Predictor
 
-    model_type = 'carbon' #'load'
-    model_name = 'carbon' #f'load_{UCam_ids[0]}'
+    model_type = 'load'
+    model_name = f'load_{UCam_ids[0]}'
     building_index = 0
 
     # specify scope of inference
@@ -337,5 +339,6 @@ if __name__ == '__main__':
         main(
             model_group_name, model_architecture, predictor_model,
             model_type, model_name, building_index,
-            dataset_path, idx_start, idx_end
+            dataset_path, idx_start, idx_end,
+            val_max=300
         ) # val_max=300
