@@ -19,6 +19,9 @@ def main(
         save_path='temp.html', **kwargs
     ):
 
+    attention_models = ['TFT']
+    no_loss_plot_models = ['DeepAR']
+
     # load model group - note ordering does not matter
     model_group = predictor_model(model_group_name, load='group')
 
@@ -41,7 +44,9 @@ def main(
 
     # perform inference
     print("\nPerforming inference...")
-    raw_predictions, x = model.predict(dataset_dl, mode="raw", return_x=True)
+    quantile_predictions, x = model.predict(dataset_dl, mode="quantiles", return_x=True)
+    if model_architecture not in no_loss_plot_models: 
+        raw_predictions, x = model.predict(dataset_dl, mode="raw", return_x=True)
     print(f"Loss: {round(model.loss.compute().item(),4)}")
 
     # Plot dynamic inference timeseries chart
@@ -130,10 +135,10 @@ def main(
 
         # get encoder length, compute attention
         encoder_length = x["encoder_lengths"][0]
-        if model_architecture in ['TFT']:
+        if model_architecture in attention_models:
             interpretation = model.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
 
-        if model_architecture not in ['DeepAR']:
+        if model_architecture not in no_loss_plot_models:
             # outrageously hacky way of computing prediction loss
             fig, dummy_ax = plt.subplots()
             model.plot_prediction(x, raw_predictions, idx=idx, add_loss_to_title=True, ax=dummy_ax)
@@ -146,7 +151,7 @@ def main(
         plot_data = [
             go.Scatter( # p95 area fill
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,0],
+                y=quantile_predictions[idx,:,0],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.1)", width=0),
                 name="p95",
@@ -154,7 +159,7 @@ def main(
             ),
             go.Scatter(
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,6],
+                y=quantile_predictions[idx,:,6],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.1)", width=0),
                 name="p95",
@@ -162,7 +167,7 @@ def main(
             ),
             go.Scatter( # p80 area fill
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,1],
+                y=quantile_predictions[idx,:,1],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.2)", width=0),
                 name="p80",
@@ -170,7 +175,7 @@ def main(
             ),
             go.Scatter(
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,5],
+                y=quantile_predictions[idx,:,5],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.2)", width=0),
                 name="p80",
@@ -178,7 +183,7 @@ def main(
             ),
             go.Scatter( # p50 area fill
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,2],
+                y=quantile_predictions[idx,:,2],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.4)", width=0),
                 name="p50",
@@ -186,7 +191,7 @@ def main(
             ),
             go.Scatter(
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,4],
+                y=quantile_predictions[idx,:,4],
                 mode="lines",
                 line=dict(color="rgba(249, 115, 6, 0.4)", width=0),
                 name="p50",
@@ -213,14 +218,14 @@ def main(
 
             go.Scatter( # mean prediction
                 x=list(range(max_prediction_length)),
-                y=raw_predictions['prediction'][idx,:,3],
+                y=quantile_predictions[idx,:,3],
                 mode="lines",
                 line=dict(color="rgba(117,187,253, 1)", width=2),
                 name="Mean prediction"
             ),
         ]
 
-        if model_architecture not in ['DeepAR']:
+        if model_architecture not in no_loss_plot_models:
             plot_data.extend([
             go.Bar( # prediction loss bar chart
                 x=[max_prediction_length+1],
@@ -231,7 +236,7 @@ def main(
                 yaxis='y2',
             )])
 
-        if model_architecture in ['TFT']:
+        if model_architecture in attention_models:
             plot_data.extend([
             go.Scatter( # encoder attention
                 x=[-1*i for i in reversed(range(1,encoder_length+1))],
@@ -324,8 +329,8 @@ if __name__ == '__main__':
 
     # specify model to be used for inference
     model_group_name = 'test'
-    model_architecture = 'DeepAR'
-    predictor_model = DeepAR_Predictor
+    model_architecture = 'NHiTS'
+    predictor_model = NHiTS_Predictor
 
     model_type = 'load'
     model_name = f'load_{UCam_ids[0]}'
