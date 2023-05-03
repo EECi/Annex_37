@@ -35,7 +35,7 @@ def main(
 
     # construct inference dataset
     batch_size = 128
-    n_workers = 4 if os.cpu_count() >= 8 else int(os.cpu_count()/2)
+    n_workers = min(os.cpu_count(),4)
     dataset_ds, = model_group.format_CityLearn_datasets([dataset_path], model_type=model_type, model_name=model_name, building_index=building_index)
     dataset_dl = dataset_ds.to_dataloader(train=False, batch_size=batch_size, num_workers=n_workers)
 
@@ -133,25 +133,17 @@ def main(
         if model_architecture in ['TFT']:
             interpretation = model.interpret_output(raw_predictions.iget(slice(idx, idx + 1)))
 
-        # outrageously hacky way of computing prediction loss
-        fig, dummy_ax = plt.subplots()
-        model.plot_prediction(x, raw_predictions, idx=idx, add_loss_to_title=True, ax=dummy_ax)
-        prediction_loss = float(dummy_ax.get_title().split(' ')[1])
-        plt.close(fig)
-        del fig, dummy_ax
-        prediction_losses.append(prediction_loss)
+        if model_architecture not in ['DeepAR']:
+            # outrageously hacky way of computing prediction loss
+            fig, dummy_ax = plt.subplots()
+            model.plot_prediction(x, raw_predictions, idx=idx, add_loss_to_title=True, ax=dummy_ax)
+            prediction_loss = float(dummy_ax.get_title().split(' ')[1])
+            plt.close(fig)
+            del fig, dummy_ax
+            prediction_losses.append(prediction_loss)
 
         # construct plots for each frame
         plot_data = [
-            go.Bar( # prediction loss bar chart
-                x=[max_prediction_length+1],
-                y=[prediction_loss],
-                width=1,
-                marker=dict(color="rgba(244, 50, 12, 1)"),
-                name="Loss",
-                yaxis='y2',
-            ),
-
             go.Scatter( # p95 area fill
                 x=list(range(max_prediction_length)),
                 y=raw_predictions['prediction'][idx,:,0],
@@ -227,6 +219,17 @@ def main(
                 name="Mean prediction"
             ),
         ]
+
+        if model_architecture not in ['DeepAR']:
+            plot_data.extend([
+            go.Bar( # prediction loss bar chart
+                x=[max_prediction_length+1],
+                y=[prediction_loss],
+                width=1,
+                marker=dict(color="rgba(244, 50, 12, 1)"),
+                name="Loss",
+                yaxis='y2',
+            )])
 
         if model_architecture in ['TFT']:
             plot_data.extend([
