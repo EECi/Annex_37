@@ -471,7 +471,7 @@ class TF_Predictor(BasePredictorModel):
         if model_type in ['load','solar']:
             self.model_names[model_type].append(model_name)
         else:
-            warnings.warn("Warning: f{} model replaced.".format(model_type))
+            warnings.warn("Warning: {} model replaced.".format(model_type))
             self.model_names[model_type] = model_name
         self.models[model_type][model_name] = model
 
