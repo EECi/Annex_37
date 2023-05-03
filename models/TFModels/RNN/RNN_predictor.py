@@ -8,7 +8,7 @@ from pytorch_forecasting import RecurrentNetwork, RMSE
 class RNN_Predictor(TF_Predictor):
     """Implementation of RNN-based prediction model for the CityLearn LinMPC controller."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
 
         if not hasattr(self, 'cell_type'): raise NotImplementedError # must be defined in child model class
 
@@ -28,7 +28,7 @@ class RNN_Predictor(TF_Predictor):
             'reduce_on_plateau_patience': 3
         }
 
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
 
     def _specify_time_varying_unknown_reals(self, model_type: str):

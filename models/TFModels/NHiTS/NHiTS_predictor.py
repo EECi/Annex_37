@@ -8,7 +8,7 @@ from pytorch_forecasting import NHiTS, QuantileLoss
 class NHiTS_Predictor(TF_Predictor):
     """Implementation of N-HiTS-based prediction model for the CityLearn LinMPC controller."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
 
         self.model_architecture = 'NHiTS'
         self.pytorch_forecasting_model_class = NHiTS
@@ -26,7 +26,7 @@ class NHiTS_Predictor(TF_Predictor):
             'reduce_on_plateau_patience': 3,
         }
 
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
 
     def _specify_time_varying_unknown_reals(self, model_type: str):

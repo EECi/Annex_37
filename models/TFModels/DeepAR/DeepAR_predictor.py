@@ -8,7 +8,7 @@ from pytorch_forecasting import DeepAR, NormalDistributionLoss
 class DeepAR_Predictor(TF_Predictor):
     """Implementation of DeepAR-based prediction model for the CityLearn LinMPC controller."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
 
         self.model_architecture = 'DeepAR'
         self.pytorch_forecasting_model_class = DeepAR
@@ -25,7 +25,7 @@ class DeepAR_Predictor(TF_Predictor):
             'reduce_on_plateau_patience': 3
         }
 
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
 
     def _specify_time_varying_unknown_reals(self, model_type: str):
