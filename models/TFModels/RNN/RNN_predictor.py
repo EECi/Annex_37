@@ -50,14 +50,14 @@ class RNN_Predictor(TF_Predictor):
 class LSTM_Predictor(RNN_Predictor):
     """Implementation of LSTM variant of RNN-based prediction model."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self.cell_type = 'LSTM'
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class GRU_Predictor(RNN_Predictor):
     """Implementation of GRU variant of RNN-based prediction model."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self.cell_type = 'GRU'
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
