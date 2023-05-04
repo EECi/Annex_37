@@ -44,7 +44,7 @@ def main(
 
     # perform inference
     print("\nPerforming inference...")
-    quantile_predictions, x = model.predict(dataset_dl, mode="quantiles", return_x=True)
+    quantile_predictions, x = model.predict(dataset_dl, mode="quantiles", mode_kwargs={'quantiles':[0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]}, return_x=True)
     if model_architecture not in no_loss_plot_models: 
         raw_predictions, x = model.predict(dataset_dl, mode="raw", return_x=True)
     print(f"Loss: {round(model.loss.compute().item(),4)}")
@@ -328,9 +328,9 @@ if __name__ == '__main__':
         UCam_ids = json.load(json_file)["UCam_building_ids"]
 
     # specify model to be used for inference
-    model_group_name = 'test'
-    model_architecture = 'NHiTS'
-    predictor_model = NHiTS_Predictor
+    model_group_name = 'test-GRU'
+    model_architecture = 'RNN'
+    predictor_model = GRU_Predictor
 
     model_type = 'load'
     model_name = f'load_{UCam_ids[0]}'
