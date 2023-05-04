@@ -21,7 +21,7 @@ class RNN_Predictor(TF_Predictor):
             'rnn_layers': 3,
             'dropout': 0.1,
             # loss metric to optimize
-            'loss': RMSE(),
+            'loss': RMSE(quantiles=[0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]),
             # set optimizer
             'optimizer': 'adam',
             # optimizer parameters
