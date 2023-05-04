@@ -456,8 +456,7 @@ class TF_Predictor(BasePredictorModel):
                 if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
                     print("Aborting model creation.")
                     return
-            else:
-                shutil.rmtree(model_path)
+            shutil.rmtree(model_path)
 
         # set default model construction kwargs
         for key in self.model_constructor_kwargs:
