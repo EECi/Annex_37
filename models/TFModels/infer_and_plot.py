@@ -19,8 +19,15 @@ def main(
         save_path='temp.html', **kwargs
     ):
 
+    # define model architecture handling
     attention_models = ['TFT']
     no_loss_plot_models = ['DeepAR']
+    unsupported_models = ['RNN']
+
+    if model_architecture in unsupported_models:
+        # TODO: add support for RNN model architecture
+        # NOTE: issue is that predict only returns a single timeseries not quantiles
+        raise ValueError(f"Model architecture {model_architecture} not yet supported.")
 
     # load model group - note ordering does not matter
     model_group = predictor_model(model_group_name, load='group')
