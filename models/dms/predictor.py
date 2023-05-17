@@ -120,6 +120,10 @@ class Predictor(BasePredictorModel):
                 load_path = os.path.join(dir, checkpoint_name)
                 self.models[key] = self.models[key].load_from_checkpoint(load_path, **mparam)
                 self.models[key].eval()
+                try:
+                    self.models[key].train_flag = False
+                except Exception as e:
+                    pass
 
     def train(self, patience=25, max_epoch=200):
         """Train all models.
@@ -190,9 +194,10 @@ class Predictor(BasePredictorModel):
                           accelerator="cuda",
                           devices=find_usable_cuda_devices(1),
                           log_every_n_steps=10,
+                          val_check_interval=0.25,
                           callbacks=[early_stop_callback, CustomProgressBar()])
         tuner = Tuner(trainer)
-        lr_finder = tuner.lr_find(model, train_dataloader, val_dataloader, min_lr=1e-6, max_lr=1e-1)
+        lr_finder = tuner.lr_find(model, train_dataloader, val_dataloader, min_lr=1e-6, max_lr=1e-3)
         lr = lr_finder.suggestion()
         model.learning_rate = lr
         trainer.fit(model, train_dataloader, val_dataloader)
@@ -231,6 +236,7 @@ class Predictor(BasePredictorModel):
             writer = csv.writer(file)
             writer.writerow(results)
         return header, results
+
 
     def test_individual(self, building_index=None, dataset_type=None, key=None):
         """Test an individual model.

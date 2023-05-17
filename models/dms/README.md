@@ -1,5 +1,5 @@
 # Direct Multi-Step Time Series Forecasting 🔮
-
+TODO: implemented models and mparams
 
 ---
 
@@ -89,7 +89,12 @@ Otherwise use the following format:
 ```
 
 ### `model_name` 🕵️‍♂️
-Specifies the name of the model to load. Currently only the `vanilla` model has been implemented, which is an MLP. 
+Specifies the name of the model to load. The implemented models currently include:
+- `vanilla` 
+- `vanillax`
+- `conv`
+
+Please see the model's docstring in [utils.py](models/dms/utils.py)) file for the `mparams` of each model.
 
 The architecture is defined using `L`, `T` and `layers` (a list that specifies the hidden layers dimensions).
 

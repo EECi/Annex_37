@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -18,7 +19,7 @@ cmap = px.qualitative.Plotly
 # eval scatter ---------------------------------------------------------------------------------------------------------
 model_names = data_eval['Model'].values
 traces_eval = []
-colors = [cmap[i] for i in range(len(model_names))]
+colors = [cmap[i % len(cmap)] for i in range(len(model_names))]
 for i, model_name in enumerate(model_names):
     trace = go.Scatter(
         x=data_eval.columns[1:],
@@ -30,10 +31,6 @@ for i, model_name in enumerate(model_names):
         marker=dict(
             size=10,
             opacity=0.8,
-            # line=dict(width=0.5, color='white'),
-            # color=i,
-            # color=range(len(model_names)),
-            # colorscale='Viridis'
             color=colors[i]
         )
     )
@@ -45,7 +42,7 @@ fig_scatter_eval = go.Figure(data=traces_eval)
 # forecast scatter -----------------------------------------------------------------------------------------------------
 model_names = data_forecast['Model'].values
 traces_forecast = []
-colors = [cmap[i] for i in range(len(model_names))]
+colors = [cmap[i % len(cmap)] for i in range(len(model_names))]
 for i, model_name in enumerate(model_names):
     trace = go.Scatter(
         x=data_forecast.columns[1:],
@@ -66,12 +63,16 @@ fig_scatter_forecast = go.Figure(data=traces_forecast)
 
 
 # forecast table -------------------------------------------------------------------------------------------------------
-best_tally_forecast = []
+forecast_average_ranks = []
 for column in data_forecast.columns[1:]:
     data_forecast[column] = data_forecast[column].rank(method='min').astype(int)
-    best = data_forecast.nsmallest(1, column)[column].index
-    data_forecast.loc[best, column] = data_forecast.loc[best, column].astype(str) + ' 🥇'
-    best_tally_forecast.append(best.item())
+    forecast_average_ranks.append(data_forecast[column].values)
+    best = data_forecast.nsmallest(3, column)[column].index
+    data_forecast.loc[best[0], column] = str(data_forecast.loc[best[0], column]) + ' 🥇'
+    data_forecast.loc[best[1], column] = str(data_forecast.loc[best[1], column]) + ' 🥈'
+    data_forecast.loc[best[2], column] = str(data_forecast.loc[best[2], column]) + ' 🥉'
+forecast_average_ranks = np.array(forecast_average_ranks).mean(axis=0)
+
 trace_table_forecast = go.Table(
     header=dict(values=list(data_forecast.columns)),
     cells=dict(values=[data_forecast[col] for col in data_forecast.columns])
@@ -82,10 +83,14 @@ fig_table_forecast = go.Figure(data=[trace_table_forecast])
 # eval table -------------------------------------------------------------------------------------------------------
 for column in data_eval.columns[1:]:
     data_eval[column] = data_eval[column].rank(method='min').astype(int)
-    best = data_eval.nsmallest(1, column)[column].index
-    data_eval.loc[best, column] = data_eval.loc[best, column].astype(str) + ' 🥇'
+    # best = data_eval.nsmallest(1, column)[column].index
+    # data_eval.loc[best, column] = data_eval.loc[best, column].astype(str) + ' 🥇'
+    best = data_eval.nsmallest(3, column)[column].index
+    data_eval.loc[best[0], column] = str(data_eval.loc[best[0], column]) + ' 🥇'
+    data_eval.loc[best[1], column] = str(data_eval.loc[best[1], column]) + ' 🥈'
+    data_eval.loc[best[2], column] = str(data_eval.loc[best[2], column]) + ' 🥉'
     if column == 'Overall':
-        best_eval = best.item()
+        best_eval = best[0]
 trace_table_eval = go.Table(
     header=dict(values=list(data_eval.columns)),
     cells=dict(values=[data_eval[col] for col in data_eval.columns])
@@ -114,8 +119,8 @@ fig.update_layout(
     height=1600
 )
 
-fig.add_trace(trace_table_forecast, row=1, col=1)
-fig.add_trace(trace_table_eval, row=2, col=1)
+fig.add_trace(trace_table_eval, row=1, col=1)
+fig.add_trace(trace_table_forecast, row=2, col=1)
 for trace in traces_eval:
     fig.add_trace(trace, row=3, col=1)
 for trace in traces_forecast:
@@ -129,7 +134,21 @@ fig.show()
 
 
 # leaderboard.md -------------------------------------------------------------------------------------------------------
-best_forecast = max(set(best_tally_forecast), key=best_tally_forecast.count)
+best_forecast = np.argmin(forecast_average_ranks)
+data_forecast['Overall'] = forecast_average_ranks
+data_forecast['Overall'] = data_forecast['Overall'].rank(method='min').astype(int)
+
+last_col = data_forecast.columns[-1]
+first_col = data_forecast.columns[0]
+other_cols = data_forecast.columns[1:-1]
+new_cols = [first_col] + [last_col] + list(other_cols)
+data_forecast = data_forecast[new_cols]
+
+best = data_forecast.nsmallest(3, 'Overall')['Overall'].index
+data_forecast.loc[best[0], 'Overall'] = str(data_forecast.loc[best[0], 'Overall']) + ' 🥇'
+data_forecast.loc[best[1], 'Overall'] = str(data_forecast.loc[best[1], 'Overall']) + ' 🥈'
+data_forecast.loc[best[2], 'Overall'] = str(data_forecast.loc[best[2], 'Overall']) + ' 🥉'
+
 with open('outputs/leaderboard.md', 'w', encoding='utf-8') as f:
     f.write('# Leaderboard\n')
 

@@ -79,6 +79,12 @@ def evaluate(predictor,
         if forecasts is None:   # forecastor opt out
             actions = np.zeros((len(lp.b_inds), 1))
         else:
+            forecasts = list(forecasts)
+            forecasts[0] = forecasts[0].reshape(len(env.buildings), -1)
+            forecasts[1] = forecasts[1].reshape(len(env.buildings), -1)
+            forecasts[2] = forecasts[2].reshape(-1)
+            forecasts[3] = forecasts[3].reshape(-1)
+
             # setup and solve predictive Linear Program model of system
             lp_start = time.perf_counter()
             lp.set_custom_time_data(*forecasts, current_socs=current_socs)
@@ -151,7 +157,7 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'H256_L168_T48'
+    model_name = 'linear_1'
     results_file = 'evaluate_results.csv'
     results_file = os.path.join('outputs', results_file)
 

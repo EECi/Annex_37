@@ -39,7 +39,6 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
     assert len(forecasts_array) == len(ground_truth_array), "Must provide same number of forecasts and ground truths to compare."
 
     metric_scores = []
-
     for forecast, actual in zip(forecasts_array, ground_truth_array):
         a = np.array(actual)
         f = np.array(forecast)[:len(a)]
@@ -119,10 +118,10 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
             else:
                 # Log forecasts.
                 for i, b in enumerate(env.buildings):
-                    load_logs[b.name]['forecasts'].append(forecasts[0][i])
-                    pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i])
-                pricing_logs['forecasts'].append(forecasts[2])
-                carbon_logs['forecasts'].append(forecasts[3])
+                    load_logs[b.name]['forecasts'].append(forecasts[0][i].reshape(-1))
+                    pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i].reshape(-1))
+                pricing_logs['forecasts'].append(forecasts[2].reshape(-1))
+                carbon_logs['forecasts'].append(forecasts[3].reshape(-1))
                 # Log ground-truth values.
                 # note abuse of Python array slicing to give variable length actuals toward end of lists
                 for i,b in enumerate(env.buildings):
@@ -132,7 +131,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
                 carbon_logs['actuals'].append(b.carbon_intensity.carbon_intensity[env.time_step+1:env.time_step+1+tau])
 
             # Step environment.
-            actions = np.zeros((len(env.buildings),1))
+            actions = np.zeros((len(env.buildings), 1))
             observations, _, done, _ = env.step(actions)
 
             num_steps += 1
@@ -210,7 +209,7 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'H256_L168_T48'
+    model_name = 'linear_1'
     results_file = 'forecast_results.csv'
     results_file = os.path.join('outputs', results_file)
 

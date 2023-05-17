@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ import lightning.pytorch as pl
 def model_finder(model_name, mparam):
     """Instantiates and returns an instance of the specified model.
     Args:
-        model_name (str): The name of the model to be created.
+        model_name (str): The name of the model to be created :(vanilla, resmlp, conv).
         mparam (dict): A dictionary of model parameters.
     Returns:
         The newly created model instance, or None if the specified model_name is not supported.
@@ -22,6 +23,10 @@ def model_finder(model_name, mparam):
     """
     if model_name == 'vanilla':
         return Vanilla(**mparam)
+    if model_name == 'resmlp':
+        return ResMLP(**mparam)
+    if model_name == 'conv':
+        return Conv(**mparam)
     else:
         return None
 
@@ -63,6 +68,162 @@ class Vanilla(pl.LightningModule):
             x = torch.relu(self.input_layer(x))
             for layer in self.hidden_layers:
                 x = torch.relu(layer(x))
+        x = self.output_layer(x)
+        return x
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log("val_loss", loss)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+
+class ResMLPModule(torch.nn.Module):
+    def __init__(self, input_size, feature_size):
+        super().__init__()
+        self.input_layer = torch.nn.Linear(input_size, feature_size)
+        self.output_layer = torch.nn.Linear(feature_size, input_size)
+
+    def forward(self, x):
+        x_res = x
+        x = torch.relu(self.input_layer(x))
+        x = self.output_layer(x)
+        return torch.relu(x + x_res)
+
+
+class ResMLP(pl.LightningModule):
+    """A PyTorch Lightning module for a residual MLP neural network.
+    Args:
+        L (int): Input dimension.
+        T (int): Output dimension.
+        feature_sizes (tuple, optional): Tuple of hidden layer sizes. Defaults to (504, 504).
+        learning_rate (float, optional): Learning rate for the optimizer. Defaults to 1e-3.
+    Methods:
+        forward(x): Defines the forward pass of the neural network.
+        training_step(batch, batch_idx): Performs a training step on a batch of data.
+        validation_step(batch, batch_idx): Performs a validation step on a batch of data.
+        configure_optimizers(): Configures the optimizer used for training.
+    Notes:
+        The neural network is a residual MLP with the following dimensions: (input, layers[0], layers[1], ..., output).
+    """
+
+    def __init__(self, L, T, feature_sizes=(504, 504), learning_rate=1e-3):
+        super().__init__()
+        self.input_dim = L
+        self.output_dim = T
+        self.feature_sizes = feature_sizes
+        self.learning_rate = learning_rate
+
+        self.output_layer = torch.nn.Linear(L, T)
+        if feature_sizes:
+            self.backbone = torch.nn.Sequential()
+            for feature_size in feature_sizes:
+                self.backbone.append(ResMLPModule(L, feature_size))
+
+    def forward(self, x):
+        if self.feature_sizes:
+            x = self.backbone(x)
+        return self.output_layer(x)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log("val_loss", loss)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+
+class Conv(pl.LightningModule):
+    """A PyTorch Lightning module for a 1D convolutional neural network.
+    Args:
+        L (int): Input dimension. Is not required, provided for consistency.
+        T (int): Output dimension.
+        channels (tuple, optional): Tuple of the number of channels for each convolutional layer.
+        kernel_sizes (tuple, optional): Tuple of the kernel size of each convolutional layer.
+        output_kernel_size (int): Number of channels to use in the final convolution layer (before the output linear).
+        patch_size (int, optional): Number of consecutive time indices to put into one patch.
+        patch_stride (int, optional): Number of time indices to skip for the next patch.
+        learning_rate (float, optional): Learning rate for the optimizer. Defaults to 1e-3.
+    Methods:
+        forward(x): Defines the forward pass of the neural network.
+        training_step(batch, batch_idx): Performs a training step on a batch of data.
+        validation_step(batch, batch_idx): Performs a validation step on a batch of data.
+        configure_optimizers(): Configures the optimizer used for training.
+    Notes:
+        The generated architecture : (conv(1, channels[0], kernel_sizes[0]),
+                                      conv(channels[0], channels[1], kernel_sizes[1])
+                                      ...
+                                      conv(channels[-1], 1, output_kernel_size)
+                                      linear(-1, T))
+        If channels or kernel_sizes only has one element don't forget to add the comma in the tuple eg. (5,)
+    """
+
+    def __init__(self, L, T, channels=(5,), kernel_sizes=(12,), output_kernel_size=12, patch_size=1, patch_stride=1,
+                 learning_rate=1e-3):
+        super().__init__()
+        self.input_dim = L
+        self.output_dim = T
+        self.channels = channels
+        self.kernel_sizes = kernel_sizes
+        self.output_kernel_size = output_kernel_size
+        self.patch_size = patch_size
+        self.patch_stride = patch_stride    # if == patch_size then no overlap
+        self.learning_rate = learning_rate
+
+        self.conv = torch.nn.Sequential(torch.nn.Conv1d(in_channels=patch_size,
+                                        out_channels=channels[0],
+                                        kernel_size=kernel_sizes[0])
+                                        )
+        for i in range(1, len(channels)):
+            self.conv.append(torch.nn.Conv1d(in_channels=channels[i-1],
+                                             out_channels=channels[i],
+                                             kernel_size=kernel_sizes[i])
+                             )
+        self.output_conv = torch.nn.Conv1d(in_channels=channels[-1],
+                                           out_channels=1,
+                                           kernel_size=output_kernel_size)
+
+        self.output_layer_input_dim = L
+        for kernel_size in kernel_sizes:
+            self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, kernel_size)
+        self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, output_kernel_size)
+
+        assert self.output_layer_input_dim > 0, "output layer's input size is less than zero, reduce the kernel size" \
+                                                "and/or the number of convolutional layers used."
+        self.output_layer = torch.nn.Linear(self.output_layer_input_dim, self.output_dim)
+
+    def dim_in2out(self, input_dim, kernel_size):
+        output_size = input_dim - kernel_size + 1
+        return output_size
+
+    def forward(self, x):
+        # unfold discards some data if it doesn't form full patches - use flip to discard data with lower time indices
+        # as this is less important than data with higher time indices.
+        x = x.flip(-1).unfold(x.ndim - 1, self.patch_size, self.patch_stride).transpose(x.ndim - 1, x.ndim).flip(-1, -2)
+
+        for layer in self.conv:
+            x = torch.relu(layer(x))
+        x = torch.relu(self.output_conv(x))
+        x = x.view(-1, self.output_layer_input_dim)
         x = self.output_layer(x)
         return x
 
