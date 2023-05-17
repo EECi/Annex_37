@@ -11,12 +11,11 @@ import os
 import csv
 import time
 import numpy as np
-import cvxpy as cp
 
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor, DMSPredictor
+from models import ExamplePredictor, DMSPredictor, TFTPredictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
