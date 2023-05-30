@@ -667,7 +667,7 @@ class TF_Predictor(BasePredictorModel):
 
 
         # Perform prediction.
-        if (len(self.buffer['pricing']) < self.L) or (self.simulation_duration - t < self.T):
+        if (len(self.buffer['pricing']) < self.L) or ((self.simulation_duration - 1) - t < self.T):
             return None # opt out of prediction if buffer not yet full
         else:
             # construct base df with time & past weather info
