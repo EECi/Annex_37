@@ -51,7 +51,7 @@ We provide the following files for comparing the model's performance.
 Setting `save = True` in `assess_forecast.py` and `evaluate.py` will log the performances in the `outputs` directory.  
 
 Running `leaderboard.py` will then load the results from the `output` directory and update
-[leaderboard](outputs/leaderboard.md) correspondingly.  
+[leaderboard](archive_ignore/outputs/leaderboard.md) correspondingly.  
 
 `assess_forecast.py` is used to assess the quality of the forecast only. 
 

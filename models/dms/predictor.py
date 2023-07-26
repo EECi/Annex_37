@@ -194,7 +194,7 @@ class Predictor(BasePredictorModel):
                           accelerator="cuda",
                           devices=find_usable_cuda_devices(1),
                           log_every_n_steps=10,
-                          val_check_interval=0.25,
+                          val_check_interval=1.0,
                           callbacks=[early_stop_callback, CustomProgressBar()])
         tuner = Tuner(trainer)
         lr_finder = tuner.lr_find(model, train_dataloader, val_dataloader, min_lr=1e-6, max_lr=1e-3)

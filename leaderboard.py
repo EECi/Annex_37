@@ -7,11 +7,11 @@ import plotly.express.colors as px
 
 
 eval_file = 'evaluate_results.csv'
-eval_file = os.path.join('outputs', eval_file)
+eval_file = os.path.join('archive_ignore/outputs', eval_file)
 data_eval = pd.read_csv(eval_file)
 
 forecast_file = 'forecast_results.csv'
-forecast_file = os.path.join('outputs', forecast_file)
+forecast_file = os.path.join('archive_ignore/outputs', forecast_file)
 data_forecast = pd.read_csv(forecast_file)
 
 cmap = px.qualitative.Plotly
@@ -149,7 +149,7 @@ data_forecast.loc[best[0], 'Overall'] = str(data_forecast.loc[best[0], 'Overall'
 data_forecast.loc[best[1], 'Overall'] = str(data_forecast.loc[best[1], 'Overall']) + ' 🥈'
 data_forecast.loc[best[2], 'Overall'] = str(data_forecast.loc[best[2], 'Overall']) + ' 🥉'
 
-with open('outputs/leaderboard.md', 'w', encoding='utf-8') as f:
+with open('archive_ignore/outputs/leaderboard.md', 'w', encoding='utf-8') as f:
     f.write('# Leaderboard\n')
 
     f.write('### Evaluation \n')

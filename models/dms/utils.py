@@ -23,10 +23,12 @@ def model_finder(model_name, mparam):
     """
     if model_name == 'vanilla':
         return Vanilla(**mparam)
-    if model_name == 'resmlp':
+    elif model_name == 'resmlp':
         return ResMLP(**mparam)
-    if model_name == 'conv':
+    elif model_name == 'conv':
         return Conv(**mparam)
+    elif model_name == 'transformer':
+        return Transformer(**mparam)
     else:
         return None
 
@@ -202,14 +204,24 @@ class Conv(pl.LightningModule):
                                            out_channels=1,
                                            kernel_size=output_kernel_size)
 
-        self.output_layer_input_dim = L
-        for kernel_size in kernel_sizes:
-            self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, kernel_size)
-        self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, output_kernel_size)
+        # self.output_layer_input_dim = L
+        # for kernel_size in kernel_sizes:
+        #     self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, kernel_size)
+        # self.output_layer_input_dim = self.dim_in2out(self.output_layer_input_dim, output_kernel_size)
 
-        assert self.output_layer_input_dim > 0, "output layer's input size is less than zero, reduce the kernel size" \
-                                                "and/or the number of convolutional layers used."
-        self.output_layer = torch.nn.Linear(self.output_layer_input_dim, self.output_dim)
+        # assert self.output_layer_input_dim > 0, "output layer's input size is less than zero, reduce the kernel size" \
+        #                                         "and/or the number of convolutional layers used."
+
+        # self.output_layer = torch.nn.Linear(self.output_layer_input_dim, self.output_dim)
+
+        x = torch.randn(1, L)
+        x = x.flip(-1).unfold(x.ndim - 1, patch_size, patch_stride).transpose(x.ndim - 1, x.ndim).flip(-1, -2)
+        for layer in self.conv:
+            x = torch.relu(layer(x))
+        x = torch.relu(self.output_conv(x))
+        x = x.view(-1, x.shape[-1])
+        self.output_layer = torch.nn.Linear(x.shape[-1], self.output_dim)
+        # self.output_layer = None
 
     def dim_in2out(self, input_dim, kernel_size):
         output_size = input_dim - kernel_size + 1
@@ -223,7 +235,10 @@ class Conv(pl.LightningModule):
         for layer in self.conv:
             x = torch.relu(layer(x))
         x = torch.relu(self.output_conv(x))
-        x = x.view(-1, self.output_layer_input_dim)
+        x = x.view(-1, x.shape[-1])
+
+        # if not self.output_layer:
+        #     self.output_layer = torch.nn.Linear(x.shape[-1], self.output_dim).to("cuda" if torch.cuda.is_available() else "cpu")
         x = self.output_layer(x)
         return x
 
@@ -455,8 +470,94 @@ class IndividualInference:
 
         self.line_v.remove()
         self.line_v = self.ax.vlines(self.pred_t[self.i][0] - 1, self.ax.get_ylim()[0], self.ax.get_ylim()[1],
-                                        colors='grey', linestyles='--', linewidth=1)
+                                     colors='grey', linestyles='--', linewidth=1)
         self.fig.canvas.draw_idle()
 
     def show(self):
         plt.show()
+
+
+class Transformer(pl.LightningModule):
+    def __init__(self, hidden_dim=128, num_layers=3, num_heads=16, dropout=0.1,
+                 T=48,
+                 L=168,
+                 patch_size=12,
+                 patch_stride=12,
+                 pool_type='first',
+                 learning_rate=1e-3):
+        super().__init__()
+
+        self.allowed_pool_types = ('first', 'mean')
+        assert pool_type in self.allowed_pool_types, f'provided pool_type ({pool_type}) not in {self.allowed_pool_types}.'
+        self.pool_type = pool_type
+
+        self.output_dim = T
+        self.L = L
+        self.learning_rate = learning_rate
+        self.patch_size = patch_size
+        self.patch_stride = patch_stride
+
+        self.embedding = torch.nn.Linear(patch_size, hidden_dim)
+        self.pos_encoding = PositionalEncoding(hidden_dim, dropout=0.05)
+
+        self.transformer_encoder_layer = torch.nn.TransformerEncoderLayer(hidden_dim,
+                                                                          num_heads,
+                                                                          dim_feedforward=hidden_dim,
+                                                                          dropout=dropout)
+        self.transformer_encoder = torch.nn.TransformerEncoder(self.transformer_encoder_layer, num_layers)
+
+        self.fc = torch.nn.Linear(hidden_dim, T)
+        self.residues = None
+
+    def forward(self, x):
+        x = x.flip([-1]).unfold(x.ndim-1, self.patch_size, self.patch_stride).flip([-1]).transpose(x.ndim-1, x.ndim)
+        if x.ndim == 2:
+            x = x.unsqueeze(0)
+        x = x.permute(0, 2, 1)  # [batch, patch_size, n_patches] -> [batch, n_patches, patch_size]
+        x = self.embedding(x)
+        x = self.pos_encoding(x)
+
+        x = self.transformer_encoder(x)
+        x = self.fc(x)
+
+        if self.pool_type == 'first':
+            return x[:, 0]
+        elif self.pool_type == 'mean':
+            return torch.mean(x, dim=1)
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = torch.nn.functional.mse_loss(y_hat, y)
+        self.log("val_loss", loss)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+
+class PositionalEncoding(torch.nn.Module):
+    def __init__(self, d_model: int, dropout: float = 0.05, max_len: int = 744):
+        super().__init__()
+        self.dropout = torch.nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)

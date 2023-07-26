@@ -14,7 +14,7 @@ import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor, TFTPredictor
+from models import ExamplePredictor, DMSPredictor#, TFTPredictor   # todo put back
 
 
 def evaluate(predictor,
@@ -157,9 +157,9 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'linear_1'
+    model_name = 't_d128_l4_h16_p1'
     results_file = 'evaluate_results.csv'
-    results_file = os.path.join('outputs', results_file)
+    results_file = os.path.join('archive_ignore/outputs', results_file)
 
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)

@@ -13,14 +13,20 @@ np.random.seed(seed)
 
 L = 168
 T = 48
-expt_name = f'linear_1'
-mparam_dict = {'all': {'model_name': 'vanilla',
+expt_name = f't_d128_l4_h16_p1'
+mparam_dict = {'all': {'model_name': 'transformer',
                        'mparam': {'L': L,
                                   'T': T,
-                                  'layers': ()
+                                  'hidden_dim': 128,
+                                  'num_layers': 4,
+                                  'num_heads': 16,
+                                  'patch_size': 6,
+                                  'patch_stride': 1,
+                                  'dropout': 0.1
                                   }
                        }
                }
+
 building_indices = (5, 11, 14, 16, 24, 29)
 predictor = Predictor(mparam_dict, building_indices, L, T, expt_name, load=False)
 predictor.train(patience=100, max_epoch=500)

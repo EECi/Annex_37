@@ -15,7 +15,7 @@ import numpy as np
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor, DMSPredictor, TFTPredictor
+from models import ExamplePredictor, DMSPredictor#, TFTPredictor    # todo put back
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -166,7 +166,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
         }
 
     carbon_metrics = {
-            mname: compute_metric_score(carbon_logs['forecasts'],carbon_logs['actuals'],metric)\
+            mname: compute_metric_score(carbon_logs['forecasts'], carbon_logs['actuals'],metric)\
                 for metric,mname in zip(metrics,metric_names)
         }
 
@@ -208,9 +208,9 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'linear_1'
+    model_name = 't_d128_l4_h16_p1'
     results_file = 'forecast_results.csv'
-    results_file = os.path.join('outputs', results_file)
+    results_file = os.path.join('archive_ignore/outputs', results_file)
 
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
