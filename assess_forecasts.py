@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
 from models import ExamplePredictor, DMSPredictor
-# from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
+# from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor    # todo put back
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -82,8 +82,8 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     env = CityLearnEnv(schema=schema_path)
 
     # Initialise Predictor object.
-    if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
-        predictor.initialise_forecasting(tau,env)
+    # if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:  # todo put back
+    #     predictor.initialise_forecasting(tau, env)    # todo put back
 
     # ========================================================================
     # insert your import & setup code for your predictor here.
@@ -111,8 +111,8 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
             # Set up custom data input for method.
             forecast_kwargs = {}
-            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
-                forecast_kwargs['t'] = env.time_step
+            # if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:  # todo put back
+            #     forecast_kwargs['t'] = env.time_step  # todo put back
 
             # Compute forecast.
             forecast_start = time.perf_counter()
