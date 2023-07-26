@@ -15,7 +15,8 @@ import numpy as np
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor, DMSPredictor#, TFTPredictor    # todo put back
+from models import ExamplePredictor, DMSPredictor
+# from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -81,6 +82,8 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     env = CityLearnEnv(schema=schema_path)
 
     # Initialise Predictor object.
+    if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+        predictor.initialise_forecasting(tau,env)
 
     # ========================================================================
     # insert your import & setup code for your predictor here.
@@ -106,9 +109,14 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
             if num_steps % 100 == 0:
                 pbar.update(100)
 
+            # Set up custom data input for method.
+            forecast_kwargs = {}
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+                forecast_kwargs['t'] = env.time_step
+
             # Compute forecast.
             forecast_start = time.perf_counter()
-            forecasts = predictor.compute_forecast(observations)
+            forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
             # Perform logging.
@@ -215,9 +223,11 @@ if __name__ == '__main__':
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
     predictor = DMSPredictor(expt_name=model_name, load=True)
+    # UCam_ids = [5,11,14,16,24,29]
+    # predictor = DeepAR_Predictor(model_group_name='test',model_names=UCam_ids)
     # ==================================================================================================================
 
-    # assess forecasts
+    # Assess forecasts
     tau = 48  # model prediction horizon (number of timesteps of data predicted)
     dataset_dir = os.path.join('example', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
@@ -250,4 +260,3 @@ if __name__ == '__main__':
         with open(results_file, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(out)
-
