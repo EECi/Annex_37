@@ -50,7 +50,7 @@ def main(model_group_name, model_architecture, predictor_model, UCam_ids, train_
 if __name__ == '__main__':
 
     # set paths for train & validation datasets for training
-    dataset_path = os.path.join('data','example')
+    dataset_path = os.path.join('data','analysis')
     train_path = os.path.join(dataset_path,'train')
     val_path = os.path.join(dataset_path,'validate')
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         UCam_ids = json.load(json_file)["UCam_building_ids"]
 
     # set model group parameters
-    model_group_name = 'test'
+    model_group_name = 'analysis'
     model_architecture = 'TFT'
     predictor_model = TFT_Predictor
 
