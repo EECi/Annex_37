@@ -9,25 +9,46 @@ seed = 1
 torch.manual_seed(seed)
 random.seed(seed)
 np.random.seed(seed)
-
-
 L = 168
 T = 48
-expt_name = f't_d128_l4_h16_p1'
-mparam_dict = {'all': {'model_name': 'transformer',
+
+# linear experiments ---------------------------------------------------------------------------------------------------
+expt_name = f'new_linear_{seed}'
+mparam_dict = {'all': {'model_name': 'vanilla',
                        'mparam': {'L': L,
                                   'T': T,
-                                  'hidden_dim': 128,
-                                  'num_layers': 4,
-                                  'num_heads': 16,
-                                  'patch_size': 6,
-                                  'patch_stride': 1,
-                                  'dropout': 0.1
+                                  'layers': (),
                                   }
                        }
                }
+# ----------------------------------------------------------------------------------------------------------------------
 
-building_indices = (5, 11, 14, 16, 24, 29)
+# resmlp experiments ---------------------------------------------------------------------------------------------------
+# expt_name = f'new_resmlp_{seed}'
+# mparam_dict = {'all': {'model_name': 'resmlp',
+#                        'mparam': {'L': L,
+#                                   'T': T,
+#                                   'feature_sizes': (168,),
+#                                   }
+#                        }
+#                }
+# ----------------------------------------------------------------------------------------------------------------------
+
+# conv experiments -----------------------------------------------------------------------------------------------------
+# expt_name = f'new_conv_{seed}'
+# mparam_dict = {'all': {'model_name': 'conv',
+#                        'mparam': {'L': L,
+#                                   'T': T,
+#                                   'channels': (5,),
+#                                   'kernel_sizes': (6,),
+#                                   'output_kernel_size': 12
+#                                   }
+#                        }
+#                }
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+building_indices = (5, 11, 14, 16, 24, 29)      # todo: change this
 predictor = Predictor(mparam_dict, building_indices, L, T, expt_name, load=False)
 predictor.train(patience=100, max_epoch=500)
 

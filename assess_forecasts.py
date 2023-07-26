@@ -114,6 +114,9 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
             # if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:  # todo put back
             #     forecast_kwargs['t'] = env.time_step  # todo put back
 
+            # todo forecast_kwargs for train test generalistion for dms
+            forecast_kwargs['train_building_index'] = kwargs['train_building_index']
+
             # Compute forecast.
             forecast_start = time.perf_counter()
             forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
@@ -216,9 +219,14 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 't_d128_l4_h16_p1'
+    model_name = 'linear_1'
+    train_building_index = 5   # todo set this
+    # train_building_index = None
+
+    # todo: set expt name for saving accordingly
+
     results_file = 'forecast_results.csv'
-    results_file = os.path.join('archive_ignore/outputs', results_file)
+    results_file = os.path.join('outputs', results_file)
 
     # Instantiate predictor
     # predictor = ExamplePredictor(6, 48)
@@ -233,7 +241,8 @@ if __name__ == '__main__':
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = assess(predictor, schema_path, tau, building_breakdown=True)
+        results = assess(predictor, schema_path, tau, building_breakdown=True,
+                         train_building_index=train_building_index)
 
     if save:
         header = ['Model', 'P', 'C']

@@ -359,14 +359,18 @@ class Predictor(BasePredictorModel):
             key += '_' + str(building_index)
         return key
 
-    def compute_forecast(self, observations):
+    def compute_forecast(self, observations, train_building_index=None):
         """Compute forecasts given current observation.
 
         Args:
-            observation (List[List]): observation data for current time instance, as
+            observations (List[List]): observation data for current time instance, as
                 specified in CityLearn documentation.
                 The observation is a list of observations for each building (sub-list),
                 where the sub-lists contain values as specified in the ReadMe.md
+            train_building_index (int): the building_index of the trained model to load,
+                to test. Eg. if set to 5 then the model trained on 'load_5' will be used
+                to compute forecast for all loads. Same for solar. If set to None each
+                model will be tested on the building the were trained on.
 
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
@@ -392,6 +396,12 @@ class Predictor(BasePredictorModel):
             self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
             x = torch.tensor(self.buffer[key], dtype=torch.float32)
+            if train_building_index is not None:
+                if '_' in key:  # check for load or solar (building specific), price and carbon is the same for all buildings
+                    key = key.split('_')[0] + f'_{train_building_index}'
+                    assert key in self.models.keys(), \
+                        'models were not trained on the specified train_building_index'
+                    out[dataset_type].append(self.models[key](x).detach().numpy())
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
         load = np.array(out['load'])
