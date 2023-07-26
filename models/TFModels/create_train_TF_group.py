@@ -1,6 +1,8 @@
 """Create and train model group."""
 
 import os
+import csv
+import time
 import json
 import warnings
 from models import TFT_Predictor, NHiTS_Predictor
@@ -15,6 +17,8 @@ def main(model_group_name, model_architecture, predictor_model, UCam_ids, train_
         if input("Are you sure you want to overwrite this model? [y/n]") not in ['y','yes','Y','Yes','YES']:
             print("Aborting model creation.")
             return
+
+    start = time.time()
 
     # initialise new model group
     model_group = predictor_model(model_group_name=model_group_name,load=False)
@@ -45,6 +49,12 @@ def main(model_group_name, model_architecture, predictor_model, UCam_ids, train_
         model = model_group.new_model(model_name,model_type,train_ds,pre_confirm=True)
         model_group.train_model(model_name,model_type,train_ds,val_ds)
 
+    end = time.time()
+    print("Train time:", end-start)
+
+    with open(os.path.join(model_group_path,'training_time.csv'),'w') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['Create & train time (s)', end-start])
 
 
 if __name__ == '__main__':
