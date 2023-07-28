@@ -213,63 +213,66 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 if __name__ == '__main__':
     import warnings
 
-    # Set parameters and instantiate predictor
-    # ==================================================================================================================
-    # Parameters
-    save = True
-    model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
-    train_building_index = None # 5
-
-    results_file = 'prediction_tests_same-train-test.csv'
-    results_file = os.path.join('results', results_file)
-
-    # Instantiate predictor
-    # predictor = DMSPredictor(expt_name=model_name, load=True)
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
-    predictor = TFT_Predictor(model_group_name='analysis',model_names=UCam_ids)
-    # ==================================================================================================================
 
-    # Assess forecasts
-    tau = 48  # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('analysis', 'test')  # dataset directory
-    schema_path = os.path.join('data', dataset_dir, 'schema.json')
-    with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = assess(predictor, schema_path, tau, building_breakdown=True,
-                         train_building_index=train_building_index)
+    for b_id in UCam_ids:
 
-    if save:
-        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
-        load_header = [
-            'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
-        solar_header = [
-            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+        # Set parameters and instantiate predictor
+        # ==================================================================================================================
+        # Parameters
+        save = True
+        model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
+        train_building_index = b_id # 5
 
-        header += load_header
-        header += solar_header
+        results_file = 'prediction_tests_diff-train-test.csv'
+        results_file = os.path.join('results', results_file)
 
-        if not os.path.exists(results_file):
-            with open(results_file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(header)
+        # Instantiate predictor
+        # predictor = DMSPredictor(expt_name=model_name, load=True)
+        predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
+        # ==================================================================================================================
 
-        for metric in ['gmnMAE','gmnRMSE']:
-            out = [
-                model_name,
-                train_building_index if train_building_index is not None else 'same-train-test',
-                results['Forecast Time'],
-                tau,
-                metric,
-                results['Pricing Forecasts'][metric],
-                results['Carbon Intensity Forecasts'][metric]
-            ]
+        # Assess forecasts
+        tau = 48  # model prediction horizon (number of timesteps of data predicted)
+        dataset_dir = os.path.join('analysis', 'test')  # dataset directory
+        schema_path = os.path.join('data', dataset_dir, 'schema.json')
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore', module=r'cvxpy')
+            results = assess(predictor, schema_path, tau, building_breakdown=True,
+                            train_building_index=train_building_index)
 
-            for k, v in results['Load Forecasts'].items():
-                if 'average' not in k:
-                    out.append(v[metric])
-            for k, v in results['Solar Generation Forecasts'].items():
-                if 'average' not in k:
-                    out.append(v[metric])
-            with open(results_file, 'a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(out)
+        if save:
+            header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
+            load_header = [
+                'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
+            solar_header = [
+                'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+
+            header += load_header
+            header += solar_header
+
+            if not os.path.exists(results_file):
+                with open(results_file, 'w', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(header)
+
+            for metric in ['gmnMAE','gmnRMSE']:
+                out = [
+                    model_name,
+                    train_building_index if train_building_index is not None else 'same-train-test',
+                    results['Forecast Time'],
+                    tau,
+                    metric,
+                    results['Pricing Forecasts'][metric],
+                    results['Carbon Intensity Forecasts'][metric]
+                ]
+
+                for k, v in results['Load Forecasts'].items():
+                    if 'average' not in k:
+                        out.append(v[metric])
+                for k, v in results['Solar Generation Forecasts'].items():
+                    if 'average' not in k:
+                        out.append(v[metric])
+                with open(results_file, 'a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(out)
