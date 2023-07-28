@@ -222,7 +222,7 @@ if __name__ == '__main__':
     train_building_index = None # 5
 
     results_file = 'prediction_tests_same-train-test.csv'
-    results_file = os.path.join('outputs', results_file)
+    results_file = os.path.join('results', results_file)
 
     # Instantiate predictor
     # predictor = DMSPredictor(expt_name=model_name, load=True)
@@ -240,7 +240,7 @@ if __name__ == '__main__':
                          train_building_index=train_building_index)
 
     if save:
-        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'P', 'C']
+        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'P', 'C']
         load_header = [
             'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
         solar_header = [
@@ -259,6 +259,7 @@ if __name__ == '__main__':
                 model_name,
                 train_building_index if train_building_index is not None else 'same-train-test',
                 results['Forecast Time'],
+                tau,
                 results['Pricing Forecasts'][metric],
                 results['Carbon Intensity Forecasts'][metric]
             ]
