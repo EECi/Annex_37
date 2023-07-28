@@ -336,8 +336,8 @@ if __name__ == '__main__':
 
     # specify model to be used for inference
     model_group_name = 'analysis'
-    model_architecture = 'NHiTS'
-    predictor_model = NHiTS_Predictor
+    model_architecture = 'DeepAR'
+    predictor_model = DeepAR_Predictor
 
     model_type = 'load'
     model_name = f'load_{UCam_ids[0]}'
