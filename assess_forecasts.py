@@ -15,8 +15,7 @@ import numpy as np
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import ExamplePredictor, DMSPredictor
-# from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor    # todo put back
+from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -219,25 +218,21 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'linear_1'
-    train_building_index = 5   # todo set this
-    # train_building_index = None
+    model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
+    train_building_index = None # 5
 
-    # todo: set expt name for saving accordingly
-
-    results_file = 'forecast_results.csv'
+    results_file = 'prediction_tests_same-train-test.csv'
     results_file = os.path.join('outputs', results_file)
 
     # Instantiate predictor
-    # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name=model_name, load=True)
-    # UCam_ids = [5,11,14,16,24,29]
-    # predictor = DeepAR_Predictor(model_group_name='test',model_names=UCam_ids)
+    # predictor = DMSPredictor(expt_name=model_name, load=True)
+    UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
+    predictor = TFT_Predictor(model_group_name='analysis',model_names=UCam_ids)
     # ==================================================================================================================
 
     # Assess forecasts
     tau = 48  # model prediction horizon (number of timesteps of data predicted)
-    dataset_dir = os.path.join('example', 'test')  # dataset directory
+    dataset_dir = os.path.join('analysis', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
@@ -245,7 +240,7 @@ if __name__ == '__main__':
                          train_building_index=train_building_index)
 
     if save:
-        header = ['Model', 'P', 'C']
+        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'P', 'C']
         load_header = [
             'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
         solar_header = [
@@ -253,19 +248,27 @@ if __name__ == '__main__':
 
         header += load_header
         header += solar_header
-        out = [model_name, results['Pricing Forecasts']['gmnMAE'], results['Carbon Intensity Forecasts']['gmnMAE']]
-
-        for k, v in results['Load Forecasts'].items():
-            if 'average' not in k:
-                out.append(v['gmnMAE'])
-        for k, v in results['Solar Generation Forecasts'].items():
-            if 'average' not in k:
-                out.append(v['gmnMAE'])
 
         if not os.path.exists(results_file):
             with open(results_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(header)
-        with open(results_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(out)
+
+        for metric in ['gmnMAE','gmnRMSE']:
+            out = [
+                model_name,
+                train_building_index if train_building_index is not None else 'same-train-test',
+                results['Forecast Time'],
+                results['Pricing Forecasts'][metric],
+                results['Carbon Intensity Forecasts'][metric]
+            ]
+
+            for k, v in results['Load Forecasts'].items():
+                if 'average' not in k:
+                    out.append(v[metric])
+            for k, v in results['Solar Generation Forecasts'].items():
+                if 'average' not in k:
+                    out.append(v[metric])
+            with open(results_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(out)
