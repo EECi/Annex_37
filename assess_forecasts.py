@@ -216,6 +216,7 @@ if __name__ == '__main__':
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
 
     for b_id in UCam_ids:
+        print("Assessing forecasts for building %s model."%b_id)
 
         # Set parameters and instantiate predictor
         # ==================================================================================================================
