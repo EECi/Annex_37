@@ -199,9 +199,20 @@ class TF_Predictor(BasePredictorModel):
         Model objects are instances of the appropriate pytorch_forecasting class.
         """
 
+        # check for duplicated model names, warn user, and create copies
+        for model_type in ['load','solar']:
+            for model_name in self.model_names[model_type]:
+                if self.model_names[model_type].count(model_name) > 1:
+                    warnings.warn("Warning: Repeated model names used. Multiple copies of models created. Please check `model_names` to make sure this is the desired behaviour.\n%s"%self.model_names)
+                    n_copies = 0
+                    for i,name in enumerate(self.model_names[model_type]):
+                        if name == model_name:
+                            self.model_names[model_type][i] = name+'#copy%s'%n_copies
+                            n_copies += 1
+
         # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays
-        self.models = {
-            model_type: {model_name: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,model_name)) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
+        self.models = { # ignore '#copyX' pattern in model name when loading
+            model_type: {model_name: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,model_name.split('#')[0])) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
         }
         self.models.update({
             model_type: {self.model_names[model_type]: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
@@ -294,7 +305,9 @@ class TF_Predictor(BasePredictorModel):
     def get_TimeSeriesDataSet_parameters(self, model_type: str, model_name: str) -> Dict:
         """Load TimeSeriesDataSet parameters for trained model from json."""
 
-        dataset_params_path = os.path.join(self.model_group_path,model_type,model_name,'timeseries_dataset_params.pkl')
+        # TODO: Rethink the hacky way of loading things when the same model is reused - issue is `self.models` is a dict,
+        # so repeated model names are a pain, but they're used for loading...
+        dataset_params_path = os.path.join(self.model_group_path,model_type,model_name.split('#')[0],'timeseries_dataset_params.pkl')
         with open(dataset_params_path,'rb') as pkl_file:
             tsds_params = pickle.load(pkl_file)
 
