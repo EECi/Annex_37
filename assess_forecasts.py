@@ -110,11 +110,10 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
             # Set up custom data input for method.
             forecast_kwargs = {}
-            # if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:  # todo put back
-            #     forecast_kwargs['t'] = env.time_step  # todo put back
-
-            # todo forecast_kwargs for train test generalistion for dms
-            forecast_kwargs['train_building_index'] = kwargs['train_building_index']
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+                forecast_kwargs['t'] = env.time_step
+            elif type(predictor) in [DMSPredictor]:
+                forecast_kwargs['train_building_index'] = kwargs['train_building_index']
 
             # Compute forecast.
             forecast_start = time.perf_counter()
