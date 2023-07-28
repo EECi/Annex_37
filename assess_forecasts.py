@@ -239,7 +239,7 @@ if __name__ == '__main__':
                          train_building_index=train_building_index)
 
     if save:
-        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'P', 'C']
+        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
         load_header = [
             'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
         solar_header = [
@@ -259,6 +259,7 @@ if __name__ == '__main__':
                 train_building_index if train_building_index is not None else 'same-train-test',
                 results['Forecast Time'],
                 tau,
+                metric,
                 results['Pricing Forecasts'][metric],
                 results['Carbon Intensity Forecasts'][metric]
             ]
