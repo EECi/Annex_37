@@ -328,23 +328,23 @@ def main(
 if __name__ == '__main__':
 
     # set paths for train & validation datasets for training
-    dataset_path = os.path.join('data','example','validate')
+    dataset_path = os.path.join('data','analysis','validate')
 
     # grab building ids in specified dataset
     with open(os.path.join(dataset_path,'metadata_ext.json')) as json_file:
         UCam_ids = json.load(json_file)["UCam_building_ids"]
 
     # specify model to be used for inference
-    model_group_name = 'test-GRU'
-    model_architecture = 'RNN'
-    predictor_model = GRU_Predictor
+    model_group_name = 'analysis'
+    model_architecture = 'NHiTS'
+    predictor_model = NHiTS_Predictor
 
     model_type = 'load'
     model_name = f'load_{UCam_ids[0]}'
     building_index = 0
 
     # specify scope of inference
-    duration = 24*7*12
+    duration = 24*7*3
     idx_start = 0
     idx_end = idx_start+duration
 
