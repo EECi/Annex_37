@@ -1,4 +1,6 @@
 import os
+import csv
+import time
 import glob
 from models.dms.predictor import Predictor
 import torch
@@ -13,7 +15,7 @@ L = 168
 T = 48
 
 # linear experiments ---------------------------------------------------------------------------------------------------
-expt_name = f'new_linear_{seed}'
+expt_name = os.path.join('analysis',f'new_linear_{seed}')
 mparam_dict = {'all': {'model_name': 'vanilla',
                        'mparam': {'L': L,
                                   'T': T,
@@ -48,9 +50,18 @@ mparam_dict = {'all': {'model_name': 'vanilla',
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-building_indices = (5, 11, 14, 16, 24, 29)      # todo: change this
+building_indices = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49]
+
+start = time.time()
 predictor = Predictor(mparam_dict, building_indices, L, T, expt_name, load=False)
 predictor.train(patience=100, max_epoch=500)
+end = time.time()
+
+print("Train time:", end-start)
+
+with open(os.path.join('models','dms','resources',expt_name,'training_time.csv'),'w') as csv_file:
+    writer = csv.writer(csv_file)
+    writer.writerow(['Create & train time (s)', end-start])
 
 # clear learning rate checkpoints from current directory
 lr_checkpoint_list = glob.glob('.lr_find*')
