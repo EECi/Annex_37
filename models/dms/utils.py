@@ -278,7 +278,7 @@ class Data(Dataset):
         self.type2idx = {'load': 0, 'solar': 1, 'price': 2, 'carbon': 3}
         self.type_idx = self.type2idx[dataset_type]
 
-        dataset_dir = os.path.join('data', 'example')
+        dataset_dir = os.path.join('data', 'analysis')
         building = pd.read_csv(os.path.join(dataset_dir, version, f'UCam_Building_{building_index}.csv'))
         load = building['Equipment Electric Power [kWh]']
         solar = building['Solar Generation [W/kW]']
