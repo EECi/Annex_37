@@ -210,6 +210,72 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     return results
 
 
+def run_wrapper(b_id):
+    """Wrap assessment run in function to allow for variable clean-up during
+    batch runs."""
+
+    # Set parameters and instantiate predictor
+    # ==================================================================================================================
+    # Parameters
+    save = True
+    model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
+    train_building_index = b_id # 5
+
+    results_file = 'prediction_tests_diff-train-test.csv'
+    results_file = os.path.join('results', results_file)
+
+    # Instantiate predictor
+    # predictor = DMSPredictor(expt_name=model_name, load=True)
+    predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
+    # ==================================================================================================================
+
+    # Assess forecasts
+    tau = 48  # model prediction horizon (number of timesteps of data predicted)
+    dataset_dir = os.path.join('analysis', 'test')  # dataset directory
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action='ignore', module=r'cvxpy')
+        results = assess(predictor, schema_path, tau, building_breakdown=True,
+                        train_building_index=train_building_index)
+
+    if save:
+        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
+        load_header = [
+            'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
+        solar_header = [
+            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+
+        header += load_header
+        header += solar_header
+
+        if not os.path.exists(results_file):
+            with open(results_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
+
+        for metric in ['gmnMAE','gmnRMSE']:
+            out = [
+                model_name,
+                train_building_index if train_building_index is not None else 'same-train-test',
+                results['Forecast Time'],
+                tau,
+                metric,
+                results['Pricing Forecasts'][metric],
+                results['Carbon Intensity Forecasts'][metric]
+            ]
+
+            for k, v in results['Load Forecasts'].items():
+                if 'average' not in k:
+                    out.append(v[metric])
+            for k, v in results['Solar Generation Forecasts'].items():
+                if 'average' not in k:
+                    out.append(v[metric])
+            with open(results_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(out)
+
+
+
 if __name__ == '__main__':
     import warnings
 
@@ -217,63 +283,4 @@ if __name__ == '__main__':
 
     for b_id in UCam_ids:
         print("Assessing forecasts for building %s model."%b_id)
-
-        # Set parameters and instantiate predictor
-        # ==================================================================================================================
-        # Parameters
-        save = True
-        model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
-        train_building_index = b_id # 5
-
-        results_file = 'prediction_tests_diff-train-test.csv'
-        results_file = os.path.join('results', results_file)
-
-        # Instantiate predictor
-        # predictor = DMSPredictor(expt_name=model_name, load=True)
-        predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
-        # ==================================================================================================================
-
-        # Assess forecasts
-        tau = 48  # model prediction horizon (number of timesteps of data predicted)
-        dataset_dir = os.path.join('analysis', 'test')  # dataset directory
-        schema_path = os.path.join('data', dataset_dir, 'schema.json')
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', module=r'cvxpy')
-            results = assess(predictor, schema_path, tau, building_breakdown=True,
-                            train_building_index=train_building_index)
-
-        if save:
-            header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
-            load_header = [
-                'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
-            solar_header = [
-                'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
-
-            header += load_header
-            header += solar_header
-
-            if not os.path.exists(results_file):
-                with open(results_file, 'w', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(header)
-
-            for metric in ['gmnMAE','gmnRMSE']:
-                out = [
-                    model_name,
-                    train_building_index if train_building_index is not None else 'same-train-test',
-                    results['Forecast Time'],
-                    tau,
-                    metric,
-                    results['Pricing Forecasts'][metric],
-                    results['Carbon Intensity Forecasts'][metric]
-                ]
-
-                for k, v in results['Load Forecasts'].items():
-                    if 'average' not in k:
-                        out.append(v[metric])
-                for k, v in results['Solar Generation Forecasts'].items():
-                    if 'average' not in k:
-                        out.append(v[metric])
-                with open(results_file, 'a', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(out)
+        run_wrapper(b_id)
