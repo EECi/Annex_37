@@ -36,7 +36,7 @@ torch.set_float32_matmul_precision('medium')
 
 
 class Predictor(BasePredictorModel):
-    def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=168, T=48,
+    def __init__(self, mparam_dict=None, building_indices=None, L=168, T=48,
                  expt_name='linear_L168_T48', results_file='results.csv', load=True):
         """Initialise Prediction object and perform setup.
 
