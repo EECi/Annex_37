@@ -280,7 +280,7 @@ def run_wrapper(b_id):
 if __name__ == '__main__':
     import warnings
 
-    index = sys.argv[1]
+    index = int(sys.argv[1])
 
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
     b_id = UCam_ids[index]
