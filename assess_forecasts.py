@@ -211,23 +211,30 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     return results
 
 
-def run_wrapper(b_id):
-    """Wrap assessment run in function to allow for variable clean-up during
-    batch runs."""
+
+if __name__ == '__main__':
+    import warnings
+
+    #index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
+    UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
+    b_id = None #UCam_ids[index]
+
+
+    print("Assessing forecasts for building %s model."%b_id)
 
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 'TFT' # 'linear_1' # todo: set expt name for saving accordingly
-    train_building_index = b_id # 5
+    model_name = os.path.join('analysis','conv_0') # 'linear_1' # todo: set expt name for saving accordingly
+    train_building_index = b_id # int or None
 
-    results_file = 'prediction_tests_diff-train-test.csv'
+    results_file = 'prediction_tests_same-train-test.csv'
     results_file = os.path.join('results', results_file)
 
     # Instantiate predictor
-    # predictor = DMSPredictor(expt_name=model_name, load=True)
-    predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
+    predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    #predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
     # ==================================================================================================================
 
     # Assess forecasts
@@ -274,16 +281,3 @@ def run_wrapper(b_id):
             with open(results_file, 'a', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(out)
-
-
-
-if __name__ == '__main__':
-    import warnings
-
-    index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
-
-    UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
-    b_id = UCam_ids[index]
-
-    print("Assessing forecasts for building %s model."%b_id)
-    run_wrapper(b_id)
