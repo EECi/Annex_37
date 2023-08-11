@@ -401,7 +401,7 @@ class Predictor(BasePredictorModel):
                     key = key.split('_')[0] + f'_{train_building_index}'
                     assert key in self.models.keys(), \
                         'models were not trained on the specified train_building_index'
-                    out[dataset_type].append(self.models[key](x).detach().numpy())
+                    #out[dataset_type].append(self.models[key](x).detach().numpy())
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
         load = np.array(out['load'])
