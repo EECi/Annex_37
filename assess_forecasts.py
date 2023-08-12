@@ -215,9 +215,9 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 if __name__ == '__main__':
     import warnings
 
-    #index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
+    index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
-    b_id = None #UCam_ids[index]
+    b_id = UCam_ids[index]
 
 
     print("Assessing forecasts for building %s model."%b_id)
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     model_name = os.path.join('analysis','conv_0') # 'linear_1' # todo: set expt name for saving accordingly
     train_building_index = b_id # int or None
 
-    results_file = 'prediction_tests_same-train-test.csv'
+    results_file = 'prediction_tests_diff-train-test.csv'
     results_file = os.path.join('results', results_file)
 
     # Instantiate predictor
