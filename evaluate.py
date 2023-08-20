@@ -14,7 +14,7 @@ import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor#, TFTPredictor   # todo put back
+from models import ExamplePredictor, DMSPredictor, TFT_Predictor
 
 
 def evaluate(predictor,
@@ -107,6 +107,8 @@ def evaluate(predictor,
 
         num_steps += 1
 
+        return env, actions
+
     print("Evaluation complete.")
 
     metrics = env.evaluate()  # provides a break down of other metrics that might be of interest.
@@ -153,17 +155,20 @@ def evaluate(predictor,
 if __name__ == '__main__':
     import warnings
 
+    UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
+
     # Set parameters and instantiate predictor
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = 't_d128_l4_h16_p1'
+    model_name = os.path.join('analysis','linear_0')
     results_file = 'evaluate_results.csv'
     results_file = os.path.join('archive_ignore/outputs', results_file)
 
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)
-    predictor = DMSPredictor(expt_name=model_name, load=True)
+    # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    predictor = TFT_Predictor(model_group_name='analysis')
 
     # Evaluation parameters
     objective_dict = {'price': True, 'carbon': True, 'ramping': True}
@@ -176,16 +181,17 @@ if __name__ == '__main__':
     tau = 48    # model prediction horizon (number of timesteps of data predicted)
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
+        #results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
+        env, actions = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
 
-    if save:
-        header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
-        out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
+    # if save:
+    #     header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
+    #     out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
 
-        if not os.path.exists(results_file):
-            with open(results_file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(header)
-        with open(results_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(out)
+    #     if not os.path.exists(results_file):
+    #         with open(results_file, 'w', newline='') as file:
+    #             writer = csv.writer(file)
+    #             writer.writerow(header)
+    #     with open(results_file, 'a', newline='') as file:
+    #         writer = csv.writer(file)
+    #         writer.writerow(out)
