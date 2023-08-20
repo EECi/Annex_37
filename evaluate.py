@@ -14,7 +14,7 @@ import cvxpy as cp
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor, TFT_Predictor
+from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
 
 
 def evaluate(predictor,
@@ -47,6 +47,10 @@ def evaluate(predictor,
     # Initialise CityLearn environment object.
     env = CityLearnEnv(schema=schema_path)
 
+    # Initialise Predictor object.
+    if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+        predictor.initialise_forecasting(tau, env)
+
     # Initialise Linear MPC object.
     lp = LinProgModel(env=env)
     lp.set_battery_propery_data()
@@ -71,9 +75,16 @@ def evaluate(predictor,
         # Compute MPC action.
         # ====================================================================
 
+        # Set up custom data input for method.
+        forecast_kwargs = {}
+        if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+            forecast_kwargs['t'] = env.time_step
+        elif type(predictor) in [DMSPredictor]:
+            forecast_kwargs['train_building_index'] = kwargs['train_building_index']
+
         # make forecasts using predictor
         forecast_start = time.perf_counter()
-        forecasts = predictor.compute_forecast(observations)
+        forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
         forecast_time_elapsed += time.perf_counter() - forecast_start
 
         if forecasts is None:   # forecastor opt out
@@ -106,8 +117,6 @@ def evaluate(predictor,
         current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)])
 
         num_steps += 1
-
-        return env, actions
 
     print("Evaluation complete.")
 
@@ -176,22 +185,21 @@ if __name__ == '__main__':
     # ==================================================================================================================
 
     # evaluate predictor
-    dataset_dir = os.path.join('example', 'test')   # dataset directory
+    dataset_dir = os.path.join('analysis', 'test')   # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     tau = 48    # model prediction horizon (number of timesteps of data predicted)
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        #results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
-        env, actions = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
+        results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
 
-    # if save:
-    #     header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
-    #     out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
+    if save:
+        header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
+        out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
 
-    #     if not os.path.exists(results_file):
-    #         with open(results_file, 'w', newline='') as file:
-    #             writer = csv.writer(file)
-    #             writer.writerow(header)
-    #     with open(results_file, 'a', newline='') as file:
-    #         writer = csv.writer(file)
-    #         writer.writerow(out)
+        if not os.path.exists(results_file):
+            with open(results_file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(out)
