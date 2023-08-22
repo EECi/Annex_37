@@ -141,7 +141,7 @@ def evaluate(predictor,
 
     grid_cost = np.mean([metrics.iloc[0].value, metrics.iloc[6].value]) if objective_dict['ramping'] else np.NaN
     cost_contributions = np.array([price_cost, emissions_cost, grid_cost])
-    cost_weights = [objective_dict[key] for key in ['price', 'carbon', 'ramping']]    # enforce ordering
+    cost_weights = np.array([objective_dict[key] for key in ['price', 'carbon', 'ramping']])    # enforce ordering
     if True in cost_weights: cost_weights = np.array([1/cost_weights.count(True) if item == True else 0 for item in cost_weights])
     overall_cost = cost_contributions[~np.isnan(cost_contributions)] @ cost_weights[~np.isnan(cost_contributions)]
 
@@ -187,8 +187,8 @@ if __name__ == '__main__':
     predictor = TFT_Predictor(model_group_name='analysis')
 
     # Evaluation parameters
-    objective_dict = {'price': True, 'carbon': True, 'ramping': True}
-    clip_level = 'd'     # aggregation level for objective
+    objective_dict = {'price':0.45,'carbon':0.45,'ramping':0.1}
+    clip_level = 'b'     # aggregation level for objective
     # TODO: add mixed objective clip level option
     # ==================================================================================================================
 
