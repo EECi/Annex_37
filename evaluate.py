@@ -188,7 +188,8 @@ if __name__ == '__main__':
 
     # Evaluation parameters
     objective_dict = {'price': True, 'carbon': True, 'ramping': True}
-    clip_level = 'b'     # aggregation level for objective
+    clip_level = 'd'     # aggregation level for objective
+    # TODO: add mixed objective clip level option
     # ==================================================================================================================
 
     # evaluate predictor
