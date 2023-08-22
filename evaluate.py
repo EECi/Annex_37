@@ -96,6 +96,13 @@ def evaluate(predictor,
             forecasts[2] = forecasts[2].reshape(-1)
             forecasts[3] = forecasts[3].reshape(-1)
 
+            # ================================================================
+            # temp fix, avoid solar forecasts and set to be perfect predictions
+            forecasts[1] = np.array(
+                [b.pv.get_generation(b.energy_simulation.solar_generation)[num_steps+1:num_steps+tau+1]\
+                    for b in env.buildings])
+            # ================================================================
+
             # setup and solve predictive Linear Program model of system
             lp_start = time.perf_counter()
             lp.set_custom_time_data(*forecasts, current_socs=current_socs)
