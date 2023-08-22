@@ -96,6 +96,13 @@ def evaluate(predictor,
             forecasts[2] = forecasts[2].reshape(-1)
             forecasts[3] = forecasts[3].reshape(-1)
 
+            # ================================================================
+            # temp fix, avoid solar forecasts and set to be perfect predictions
+            forecasts[1] = np.array(
+                [b.pv.get_generation(b.energy_simulation.solar_generation)[num_steps+1:num_steps+tau+1]\
+                    for b in env.buildings])
+            # ================================================================
+
             # setup and solve predictive Linear Program model of system
             lp_start = time.perf_counter()
             lp.set_custom_time_data(*forecasts, current_socs=current_socs)
@@ -134,7 +141,7 @@ def evaluate(predictor,
 
     grid_cost = np.mean([metrics.iloc[0].value, metrics.iloc[6].value]) if objective_dict['ramping'] else np.NaN
     cost_contributions = np.array([price_cost, emissions_cost, grid_cost])
-    cost_weights = [objective_dict[key] for key in ['price', 'carbon', 'ramping']]    # enforce ordering
+    cost_weights = np.array([objective_dict[key] for key in ['price', 'carbon', 'ramping']])    # enforce ordering
     if True in cost_weights: cost_weights = np.array([1/cost_weights.count(True) if item == True else 0 for item in cost_weights])
     overall_cost = cost_contributions[~np.isnan(cost_contributions)] @ cost_weights[~np.isnan(cost_contributions)]
 
@@ -180,8 +187,9 @@ if __name__ == '__main__':
     predictor = TFT_Predictor(model_group_name='analysis')
 
     # Evaluation parameters
-    objective_dict = {'price': True, 'carbon': True, 'ramping': True}
+    objective_dict = {'price':0.45,'carbon':0.45,'ramping':0.1}
     clip_level = 'b'     # aggregation level for objective
+    # TODO: add mixed objective clip level option
     # ==================================================================================================================
 
     # evaluate predictor
