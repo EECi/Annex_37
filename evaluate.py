@@ -12,9 +12,11 @@ import time
 import numpy as np
 import cvxpy as cp
 
+from tqdm import tqdm
+
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
+from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor
 
 
 def evaluate(predictor,
@@ -68,62 +70,65 @@ def evaluate(predictor,
     current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)]) # get initial SoCs
 
     # Execute control loop.
-    while not done:
-        if num_steps % 100 == 0:
-            print(f"Num Steps: {num_steps} ({np.round(100*num_steps/env.time_steps,1)}%)")
+    with tqdm(total=env.time_steps) as pbar:
+        while not done:
+            if num_steps % 100 == 0:
+                pbar.update(100)
 
-        # Compute MPC action.
-        # ====================================================================
+            # Compute MPC action.
+            # ====================================================================
 
-        # Set up custom data input for method.
-        forecast_kwargs = {}
-        if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
-            forecast_kwargs['t'] = env.time_step
-        elif type(predictor) in [DMSPredictor]:
-            forecast_kwargs['train_building_index'] = kwargs['train_building_index']
+            assert env.time_step == num_steps
 
-        # make forecasts using predictor
-        forecast_start = time.perf_counter()
-        forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
-        forecast_time_elapsed += time.perf_counter() - forecast_start
+            # Set up custom data input for method.
+            forecast_kwargs = {}
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor]:
+                forecast_kwargs['t'] = env.time_step
+            elif type(predictor) in [DMSPredictor]:
+                forecast_kwargs['train_building_index'] = kwargs['train_building_index']
 
-        if forecasts is None:   # forecastor opt out
-            actions = np.zeros((len(lp.b_inds), 1))
-        else:
-            forecasts = list(forecasts)
-            forecasts[0] = forecasts[0].reshape(len(env.buildings), -1)
-            forecasts[1] = forecasts[1].reshape(len(env.buildings), -1)
-            forecasts[2] = forecasts[2].reshape(-1)
-            forecasts[3] = forecasts[3].reshape(-1)
+            # make forecasts using predictor
+            forecast_start = time.perf_counter()
+            forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
+            forecast_time_elapsed += time.perf_counter() - forecast_start
 
-            # ================================================================
-            # temp fix, avoid solar forecasts and set to be perfect predictions
-            forecasts[1] = np.array(
-                [b.pv.get_generation(b.energy_simulation.solar_generation)[num_steps+1:num_steps+tau+1]\
-                    for b in env.buildings])
-            # ================================================================
+            if forecasts is None:   # forecastor opt out
+                actions = np.zeros((len(lp.b_inds), 1))
+            else:
+                forecasts = list(forecasts)
+                forecasts[0] = forecasts[0].reshape(len(env.buildings), -1)
+                forecasts[1] = forecasts[1].reshape(len(env.buildings), -1)
+                forecasts[2] = forecasts[2].reshape(-1)
+                forecasts[3] = forecasts[3].reshape(-1)
 
-            # setup and solve predictive Linear Program model of system
-            lp_start = time.perf_counter()
-            lp.set_custom_time_data(*forecasts, current_socs=current_socs)
-            lp.set_LP_parameters()
-            _, _, _, _, alpha_star = lp.solve_LP()
-            actions: np.array = alpha_star[:, 0].reshape(len(lp.b_inds), 1)
-            lp_solver_time_elapsed += time.perf_counter() - lp_start
+                # ================================================================
+                # temp fix, avoid solar forecasts and set to be perfect predictions
+                forecasts[1] = np.array(
+                    [b.pv.get_generation(b.energy_simulation.solar_generation)[num_steps+1:num_steps+tau+1]\
+                        for b in env.buildings])
+                # ================================================================
 
-        # ====================================================================
-        # insert your logging code here
-        # ====================================================================
+                # setup and solve predictive Linear Program model of system
+                lp_start = time.perf_counter()
+                lp.set_custom_time_data(*forecasts, current_socs=current_socs)
+                lp.set_LP_parameters()
+                _, _, _, _, alpha_star = lp.solve_LP()
+                actions: np.array = alpha_star[:, 0].reshape(len(lp.b_inds), 1)
+                lp_solver_time_elapsed += time.perf_counter() - lp_start
 
-        # Apply action to environment.
-        # ====================================================================
-        observations, _, done, _ = env.step(actions)
+            # ====================================================================
+            # insert your logging code here
+            # ====================================================================
 
-        # Update battery states-of-charge
-        # ====================================================================
-        current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)])
+            # Apply action to environment.
+            # ====================================================================
+            observations, _, done, _ = env.step(actions)
 
-        num_steps += 1
+            # Update battery states-of-charge
+            # ====================================================================
+            current_socs = np.array([charge*capacity for charge,capacity in zip(np.array(observations)[:,soc_obs_index],lp.battery_capacities)])
+
+            num_steps += 1
 
     print("Evaluation complete.")
 
@@ -177,14 +182,13 @@ if __name__ == '__main__':
     # ==================================================================================================================
     # Parameters
     save = True
-    model_name = os.path.join('analysis','linear_0')
-    results_file = 'evaluate_results.csv'
-    results_file = os.path.join('archive_ignore/outputs', results_file)
+    model_name = os.path.join('all-0')
+    results_file = os.path.join('results', 'evaluate_tests_cntr_sens.csv')
 
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)
     # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
-    predictor = TFT_Predictor(model_group_name='analysis')
+    #predictor = TFT_Predictor(model_group_name='analysis')
 
     # Evaluation parameters
     objective_dict = {'price':0.45,'carbon':0.45,'ramping':0.1}
@@ -196,6 +200,16 @@ if __name__ == '__main__':
     dataset_dir = os.path.join('analysis', 'test')   # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
     tau = 48    # model prediction horizon (number of timesteps of data predicted)
+
+    # instantiate predictor for control senstivity study (needs env)
+    noise_levels = {
+        'load': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
+        'solar': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
+        'pricing': 0.0,
+        'carbon': 0.0
+    }
+    predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
+
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)

@@ -73,7 +73,6 @@ def evaluate_ground_truth(
 
     # Execute control loop.
     with tqdm(total=env.time_steps) as pbar:
-
         while not done:
             if num_steps%100 == 0:
                 pbar.update(100)
@@ -151,7 +150,7 @@ def evaluate_ground_truth(
 if __name__ == '__main__':
     import warnings
 
-    dataset_dir = os.path.join('example','test') # dataset directory
+    dataset_dir = os.path.join('analysis','test') # dataset directory
 
     schema_path = os.path.join('data',dataset_dir,'schema.json')
 
