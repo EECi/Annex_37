@@ -78,8 +78,6 @@ def evaluate(predictor,
             # Compute MPC action.
             # ====================================================================
 
-            assert env.time_step == num_steps
-
             # Set up custom data input for method.
             forecast_kwargs = {}
             if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor]:

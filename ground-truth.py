@@ -88,7 +88,7 @@ def evaluate_ground_truth(
                 if num_steps <= (env.time_steps - 1) - tau:
                     # setup and solve predictive Linear Program model of system
                     lp_start = time.perf_counter()
-                    lp.set_time_data_from_env(t_start=num_steps, tau=tau, current_socs=current_socs) # load ground truth data
+                    lp.set_time_data_from_env(t_start=env.time_step, tau=tau, current_socs=current_socs) # load ground truth data
                     lp.set_LP_parameters()
                     _,_,_,_,alpha_star = lp.solve_LP()
                     actions: np.array = alpha_star[:,0].reshape(len(lp.b_inds),1)
