@@ -38,7 +38,7 @@ class GRWN_Predictor(BasePredictorModel):
 
         self.param_means = {
             'load': {b.name: np.mean(b.energy_simulation.non_shiftable_load) for b in self.env.buildings},
-            'solar' : {b.name: np.mean(b.energy_simulation.solar_generation) for b in self.env.buildings},
+            'solar' : {b.name: np.mean(b.pv.get_generation(b.energy_simulation.solar_generation)) for b in self.env.buildings},
             'pricing': np.mean(self.env.buildings[0].pricing.electricity_pricing),
             'carbon': np.mean(self.env.buildings[0].carbon_intensity.carbon_intensity)
         }
@@ -91,7 +91,7 @@ class GRWN_Predictor(BasePredictorModel):
                 [b.energy_simulation.non_shiftable_load[t+1:t+self.tau+1]\
                     for b in self.env.buildings]) + self.param_grwn('load')
             predicted_pv_gens = np.array(
-                [b.energy_simulation.solar_generation[t+1:t+self.tau+1]\
+                [b.pv.get_generation(b.energy_simulation.solar_generation)[t+1:t+self.tau+1]\
                     for b in self.env.buildings]) + self.param_grwn('solar')
             predicted_pricing = np.array(
                 self.env.buildings[0].pricing.electricity_pricing[t+1:t+self.tau+1])\
