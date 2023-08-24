@@ -16,7 +16,7 @@ import numpy as np
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor
+from models import DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -111,7 +111,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
             # Set up custom data input for method.
             forecast_kwargs = {}
-            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor]:
                 forecast_kwargs['t'] = env.time_step
             elif type(predictor) in [DMSPredictor]:
                 forecast_kwargs['train_building_index'] = kwargs['train_building_index']
@@ -215,32 +215,46 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 if __name__ == '__main__':
     import warnings
 
-    index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
-    b_id = UCam_ids[index]
 
-
-    print("Assessing forecasts for building %s model."%b_id)
+    # index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
+    # b_id = UCam_ids[index]
+    # model_extensions = ['rd4y','rd2y','rd1y','rd6m','rd3m']
+    # me = model_extensions[index]
+    # test_noise_levels = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.1, 0.2]
+    # nl = test_noise_levels[index]
 
     # Set parameters and instantiate predictor
     # ==================================================================================================================
-    # Parameters
-    save = True
-    model_name = os.path.join('analysis','conv_0') # 'linear_1' # todo: set expt name for saving accordingly
-    train_building_index = b_id # int or None
 
-    results_file = 'prediction_tests_diff-train-test.csv'
-    results_file = os.path.join('results', results_file)
-
-    # Instantiate predictor
-    predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
-    #predictor = TFT_Predictor(model_group_name='analysis',model_names=[b_id]*len(UCam_ids))
-    # ==================================================================================================================
-
-    # Assess forecasts
     tau = 48  # model prediction horizon (number of timesteps of data predicted)
     dataset_dir = os.path.join('analysis', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
+
+    save = True
+    model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
+    train_building_index = None # int or None - b_id
+
+    results_file = 'prediction_tests_cntrl_sens.csv'
+    results_file = os.path.join('results', results_file)
+
+    # Instantiate predictor
+    # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    predictor = TFT_Predictor(model_group_name='analysis') # ,model_names=[b_id]*len(UCam_ids)
+    # noise_levels = {
+    #     'load': {'UCam_Building_%s'%id: nl for id in UCam_ids},
+    #     'solar': {'UCam_Building_%s'%id: nl for id in UCam_ids},
+    #     'pricing': nl,
+    #     'carbon': nl
+    # }
+    # predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
+
+
+    # ==================================================================================================================
+    # Assess forecasts and save results
+    # ==================================================================================================================
+    print("Assessing forecasts for model %s."%model_name)
+
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = assess(predictor, schema_path, tau, building_breakdown=True,

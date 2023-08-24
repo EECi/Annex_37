@@ -7,6 +7,7 @@ with specified dataset to evaluate predictor performance.
 """
 
 import os
+import sys
 import csv
 import time
 import numpy as np
@@ -176,37 +177,46 @@ if __name__ == '__main__':
 
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
 
+    # index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
+    # b_id = UCam_ids[index]
+    # model_extensions = ['rd4y','rd2y','rd1y','rd6m','rd3m']
+    # me = model_extensions[index]
+    # test_noise_levels = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.1, 0.2]
+    # nl = test_noise_levels[index]
+
     # Set parameters and instantiate predictor
     # ==================================================================================================================
-    # Parameters
-    save = True
-    model_name = os.path.join('all-0')
-    results_file = os.path.join('results', 'evaluate_tests_cntr_sens.csv')
 
-    # Instantiate Predictor
-    # predictor = ExamplePredictor(6, 48)
-    # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
-    #predictor = TFT_Predictor(model_group_name='analysis')
+    dataset_dir = os.path.join('analysis', 'test')   # dataset directory
+    schema_path = os.path.join('data', dataset_dir, 'schema.json')
+    tau = 48    # model prediction horizon (number of timesteps of data predicted)
 
     # Evaluation parameters
     objective_dict = {'price':0.45,'carbon':0.45,'ramping':0.1}
     clip_level = 'b'     # aggregation level for objective
     # TODO: add mixed objective clip level option
+
+    save = True
+    model_name = os.path.join('analysis','linear_0')
+    results_file = os.path.join('results', 'evaluate_tests_cntrl_sens.csv')
+
+    # Instantiate Predictor
+    # predictor = ExamplePredictor(6, 48)
+    predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    # predictor = TFT_Predictor(model_group_name='analysis')
+    # noise_levels = {
+    #     'load': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
+    #     'solar': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
+    #     'pricing': 0.0,
+    #     'carbon': 0.0
+    # }
+    # predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
+
+
     # ==================================================================================================================
-
-    # evaluate predictor
-    dataset_dir = os.path.join('analysis', 'test')   # dataset directory
-    schema_path = os.path.join('data', dataset_dir, 'schema.json')
-    tau = 48    # model prediction horizon (number of timesteps of data predicted)
-
-    # instantiate predictor for control senstivity study (needs env)
-    noise_levels = {
-        'load': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
-        'solar': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
-        'pricing': 0.0,
-        'carbon': 0.0
-    }
-    predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
+    # Evaluate and save results
+    # ==================================================================================================================
+    print("Evaluating controller for model %s."%model_name)
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
