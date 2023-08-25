@@ -234,9 +234,7 @@ if __name__ == '__main__':
     save = True
     model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
     train_building_index = None # int or None - b_id
-
-    results_file = 'prediction_tests_cntrl_sens.csv'
-    results_file = os.path.join('results', results_file)
+    results_file = os.path.join('results', 'prediction_tests_cntrl_sens.csv')
 
     # Instantiate predictor
     # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
@@ -257,8 +255,7 @@ if __name__ == '__main__':
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = assess(predictor, schema_path, tau, building_breakdown=True,
-                        train_building_index=train_building_index)
+        results = assess(predictor, schema_path, tau, building_breakdown=True, train_building_index=train_building_index)
 
     if save:
         header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']

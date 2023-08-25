@@ -91,7 +91,8 @@ def evaluate(predictor,
             forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
-            if forecasts is None:   # forecastor opt out
+            if (forecasts is None) or ((env.time_steps - 1) - env.time_step < tau):   # forecastor opt out
+                # TODO: remove 2nd condition, only required when solar gens are replace with env data
                 actions = np.zeros((len(lp.b_inds), 1))
             else:
                 forecasts = list(forecasts)
@@ -197,8 +198,9 @@ if __name__ == '__main__':
     # TODO: add mixed objective clip level option
 
     save = True
-    model_name = os.path.join('analysis','linear_0')
-    results_file = os.path.join('results', 'evaluate_tests_cntrl_sens.csv')
+    model_name = os.path.join('analysis','conv_0')
+    train_building_index = None
+    results_file = os.path.join('results', 'evaluate_tests_same-train-test--temp.csv')
 
     # Instantiate Predictor
     # predictor = ExamplePredictor(6, 48)
@@ -220,7 +222,7 @@ if __name__ == '__main__':
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
-        results = evaluate(predictor, schema_path, tau, objective_dict, clip_level)
+        results = evaluate(predictor, schema_path, tau, objective_dict, clip_level, train_building_index=train_building_index)
 
     if save:
         header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
