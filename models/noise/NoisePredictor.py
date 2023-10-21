@@ -25,8 +25,8 @@ class GRWN_Predictor(BasePredictorModel):
                 planning horizons can be implemented.
             noise_levels (dict): dictionary of noise levels to use for each
                 parameter. Values are the proprotional noise level, in range
-                [0,1]. Keys are `load`, `solar`, `pricing`, `carbon`. Values
-                for `load` and `solar` are dicts where the keys are the names
+                [0,1]. Keys are `load`, `solar`, `pricing`, `carbon`. For
+                `load` the value is a dict where the keys are the names
                 of the buildings (from env.buildings), and the values are the
                 noise levels for each buildling.
         """
@@ -38,7 +38,7 @@ class GRWN_Predictor(BasePredictorModel):
 
         self.param_means = {
             'load': {b.name: np.mean(b.energy_simulation.non_shiftable_load) for b in self.env.buildings},
-            'solar' : {b.name: np.mean(b.pv.get_generation(b.energy_simulation.solar_generation)) for b in self.env.buildings},
+            'solar' : np.mean(self.env.buildings[0].energy_simulation.solar_generation),
             'pricing': np.mean(self.env.buildings[0].pricing.electricity_pricing),
             'carbon': np.mean(self.env.buildings[0].carbon_intensity.carbon_intensity)
         }
@@ -55,7 +55,7 @@ class GRWN_Predictor(BasePredictorModel):
         if param_type == 'load':
             return np.array([self.grwn(self.param_means['load'][b.name] * self.noise_levels['load'][b.name]) for b in self.env.buildings])
         elif param_type == 'solar':
-            return np.array([self.grwn(self.param_means['solar'][b.name] * self.noise_levels['solar'][b.name]) for b in self.env.buildings])
+            return self.grwn(self.param_means['solar'] * self.noise_levels['solar'])
         elif param_type == 'pricing':
             return self.grwn(self.param_means['pricing'] * self.noise_levels['pricing'])
         elif param_type == 'carbon':
@@ -76,8 +76,8 @@ class GRWN_Predictor(BasePredictorModel):
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
                 period of the planning horizon (kWh) - shape (N,tau)
-            predicted_pv_gens (np.array): predicted energy generations of pv panels in each
-                period of the planning horizon (kWh) - shape (N,tau)
+            predicted_pv_gens (np.array): predicted normalised energy generations of pv
+                panels in each period of the planning horizon (W/kWp) - shape (tau)
             predicted_pricing (np.array): predicted grid electricity price in each period
                 of the planning horizon ($/kWh) - shape (tau)
             predicted_carbon (np.array): predicted grid electricity carbon intensity in each
@@ -91,8 +91,8 @@ class GRWN_Predictor(BasePredictorModel):
                 [b.energy_simulation.non_shiftable_load[t+1:t+self.tau+1]\
                     for b in self.env.buildings]) + self.param_grwn('load')
             predicted_pv_gens = np.array(
-                [b.pv.get_generation(b.energy_simulation.solar_generation)[t+1:t+self.tau+1]\
-                    for b in self.env.buildings]) + self.param_grwn('solar')
+                self.env.buildings[0].energy_simulation.solar_generation[t+1:t+self.tau+1])\
+                    + self.param_grwn('solar')
             predicted_pricing = np.array(
                 self.env.buildings[0].pricing.electricity_pricing[t+1:t+self.tau+1])\
                     + self.param_grwn('pricing')

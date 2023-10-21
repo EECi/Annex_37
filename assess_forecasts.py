@@ -91,7 +91,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
     # Initialise logging objects.
     load_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
-    pv_gen_logs = {b.name:{'forecasts': [], 'actuals': []} for b in env.buildings}
+    pv_gen_logs = {'forecasts': [], 'actuals': []}
     pricing_logs = {'forecasts': [], 'actuals': []}
     carbon_logs = {'forecasts': [], 'actuals': []}
 
@@ -128,14 +128,14 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
                 # Log forecasts.
                 for i, b in enumerate(env.buildings):
                     load_logs[b.name]['forecasts'].append(forecasts[0][i].reshape(-1))
-                    pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i].reshape(-1))
+                pv_gen_logs['forecasts'].append(forecasts[1].reshape(-1))
                 pricing_logs['forecasts'].append(forecasts[2].reshape(-1))
                 carbon_logs['forecasts'].append(forecasts[3].reshape(-1))
                 # Log ground-truth values.
                 # note abuse of Python array slicing to give variable length actuals toward end of lists
                 for i,b in enumerate(env.buildings):
                     load_logs[b.name]['actuals'].append(b.energy_simulation.non_shiftable_load[env.time_step+1:env.time_step+1+tau])
-                    pv_gen_logs[b.name]['actuals'].append(b.energy_simulation.solar_generation[env.time_step+1:env.time_step+1+tau])
+                pv_gen_logs['actuals'].append(b.energy_simulation.solar_generation[env.time_step+1:env.time_step+1+tau])
                 pricing_logs['actuals'].append(b.pricing.electricity_pricing[env.time_step+1:env.time_step+1+tau])
                 carbon_logs['actuals'].append(b.carbon_intensity.carbon_intensity[env.time_step+1:env.time_step+1+tau])
 
@@ -162,13 +162,9 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
         for mname in metric_names}
 
     pv_gen_metrics = {
-        b.name:{
-            mname: compute_metric_score(pv_gen_logs[b.name]['forecasts'],pv_gen_logs[b.name]['actuals'],metric,gnorm)\
-                for metric,mname,gnorm in zip(metrics,metric_names,globally_mean_normalised)
-        } for b in env.buildings
-    }
-    pv_gen_metrics['buildings_average'] = {mname: np.mean([pv_gen_metrics[b.name][mname] for b in env.buildings])\
-        for mname in metric_names}
+            mname: compute_metric_score(pv_gen_logs['forecasts'],pv_gen_logs['actuals'],metric)\
+                for metric,mname in zip(metrics,metric_names)
+        }
 
     pricing_metrics = {
             mname: compute_metric_score(pricing_logs['forecasts'],pricing_logs['actuals'],metric)\
@@ -187,7 +183,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     print("---Load---")
     for mname in metric_names: print(f"{mname}: {round(load_metrics['buildings_average'][mname],5)}")
     print("---Solar Generation---")
-    for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics['buildings_average'][mname],5)}")
+    for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics[mname],5)}")
     print("=====Pricing=====")
     for mname in metric_names: print(f"{mname}: {round(pricing_metrics[mname],5)}")
     print("=====Carbon Intensity=====")
@@ -198,8 +194,6 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
             print(f"====={b.name}=====")
             print("---Load---")
             for mname in metric_names: print(f"{mname}: {round(load_metrics[b.name][mname],5)}")
-            print("---Solar Generation---")
-            for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics[b.name][mname],5)}")
 
     results = {
         'Load Forecasts': load_metrics,

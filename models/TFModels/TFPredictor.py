@@ -79,7 +79,7 @@ class TF_Predictor(BasePredictorModel):
             T (int, optional): Model group planning horizon parameter. Defaults to 48.
             model_names (Union[List, Dict], optional): Dictionary of names of models of
             each type to load, or list of indices to quickly specify models named `load_{index}`,
-            `solar_{index}`, `pricing`, `carbon`. Defaults to None. Not required is loading a
+            `solar`, `pricing`, `carbon`. Defaults to None. Not required is loading a
             model group.
             load (Union[str, bool], optional): Whether to load a model group ('group'),
             load a custom selection of models ('indiv') as specified in the `model_names`
@@ -123,7 +123,7 @@ class TF_Predictor(BasePredictorModel):
             assert all([type(item) == int for item in model_names])
             model_names = {
                 'load': [f'load_{b}' for b in model_names],
-                'solar': [f'solar_{b}' for b in model_names],
+                'solar': 'solar',
                 'pricing': 'pricing',
                 'carbon': 'carbon'
             }
@@ -133,19 +133,19 @@ class TF_Predictor(BasePredictorModel):
             if not load: # initialise blank dict of model names to be filled later
                 model_names = {
                     'load': [],
-                    'solar': [],
+                    'solar': None,
                     'pricing': None,
                     'carbon': None
                 }
             elif load == 'group': # get model names for given `model_group_name`
                 for model_type in self.model_types:
                     assert os.path.exists(os.path.join(self.model_group_path,model_type)), f"`{model_type}` model logs sub-dir does not exist."
-                for model_type in ['pricing','carbon']:
+                for model_type in ['solar','pricing','carbon']:
                     if len(list(os.scandir(os.path.join(self.model_group_path,model_type)))) > 1:
                         warnings.warn("Warning: More than 1 {} model available. 1st selected in group load.".format(model_type))
                 model_names = {
                     'load': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'load')) if f.is_dir()],
-                    'solar': [os.path.split(f.path)[-1] for f in os.scandir(os.path.join(self.model_group_path,'solar')) if f.is_dir()],
+                    'solar': os.path.split(list(os.scandir(os.path.join(self.model_group_path,'solar')))[0])[-1],
                     'pricing': os.path.split(list(os.scandir(os.path.join(self.model_group_path,'pricing')))[0])[-1],
                     'carbon': os.path.split(list(os.scandir(os.path.join(self.model_group_path,'carbon')))[0])[-1]
                 }
@@ -200,10 +200,11 @@ class TF_Predictor(BasePredictorModel):
         """
 
         # check for duplicated model names, warn user, and create copies
-        for model_type in ['load','solar']:
+        for model_type in ['load']:
             for model_name in self.model_names[model_type]:
                 if self.model_names[model_type].count(model_name) > 1:
-                    warnings.warn("Warning: Repeated model names used. Multiple copies of models created. Please check `model_names` to make sure this is the desired behaviour.\n%s"%self.model_names)
+                    warnings.warn("Warning: Repeated model names used. Multiple copies of models created. Please check `model_names`\
+                                  to make sure this is the desired behaviour.\n%s"%self.model_names)
                     n_copies = 0
                     for i,name in enumerate(self.model_names[model_type]):
                         if name == model_name:
@@ -212,10 +213,12 @@ class TF_Predictor(BasePredictorModel):
 
         # NOTE: order of models in dictionary defines models used for prediction at each index in load and solar arrays
         self.models = { # ignore '#copyX' pattern in model name when loading
-            model_type: {model_name: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,model_name.split('#')[0])) for model_name in self.model_names[model_type]} for model_type in ['load','solar']
+            model_type: {model_name: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,model_name.split('#')[0]))\
+                for model_name in self.model_names[model_type]} for model_type in ['load']
         }
         self.models.update({
-            model_type: {self.model_names[model_type]: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))} for model_type in ['pricing','carbon']
+            model_type: {self.model_names[model_type]: self._load_model_from_dir_path(os.path.join(self.model_group_path,model_type,self.model_names[model_type]))}\
+                for model_type in ['solar','pricing','carbon']
         })
 
 
@@ -361,7 +364,7 @@ class TF_Predictor(BasePredictorModel):
             consistency. ALWAYS USE unless creating a new model.
             building_index (int, optional): Index of building in CityLearnEnv.buildings
             of target variable for dataset. Defaults to None. Required if target
-            variable is building specified, i.e. `model_type` is 'load' or 'solar'.
+            variable is building specified, i.e. `model_type` is 'load'.
 
         Returns:
             List[TimeSeriesDataSet]: List of formatted datasets created.
@@ -371,7 +374,7 @@ class TF_Predictor(BasePredictorModel):
 
         assert model_type in self.model_types, f"`model_type` argument must be one of {self.model_types}."
 
-        if (model_type in ['load','solar']) and (building_index == None):
+        if (model_type in ['load']) and (building_index == None):
             raise ValueError(f"Must supply `building_index` to construct {model_type} dataset from CityLearn data.")
 
         if model_name is not None:
@@ -480,7 +483,7 @@ class TF_Predictor(BasePredictorModel):
         model = self.pytorch_forecasting_model_class.from_dataset(train_dataset,**kwargs)
 
         # set model
-        if model_type in ['load','solar']:
+        if model_type in ['load']:
             self.model_names[model_type].append(model_name)
         else:
             warnings.warn("Warning: {} model replaced.".format(model_type))
@@ -614,7 +617,7 @@ class TF_Predictor(BasePredictorModel):
         # initialise observations buffer
         self.buffer = {
             'load': [[] for l in range(len(self.models['load'].keys()))],
-            'solar': [[] for l in range(len(self.models['solar'].keys()))],
+            'solar': [],
             'pricing': [],
             'carbon': []
         }
@@ -628,6 +631,9 @@ class TF_Predictor(BasePredictorModel):
         self.past_temps = env.buildings[0].weather.outdoor_dry_bulb_temperature
         self.past_dif_irads = env.buildings[0].weather.diffuse_solar_irradiance
         self.past_dir_irads = env.buildings[0].weather.direct_solar_irradiance
+
+        # get first building PV capacity for observation processing
+        self.b0_pv_cap = env.buildings[0].pv.nominal_power
 
         # put models in evaluation mode for prediction
         for model_type in self.models.keys():
@@ -658,8 +664,8 @@ class TF_Predictor(BasePredictorModel):
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
                 period of the planning horizon (kWh) - shape (N,tau)
-            predicted_pv_gens (np.array): predicted energy generations of pv panels in each
-                period of the planning horizon (kWh) - shape (N,tau)
+            predicted_pv_gens (np.array): predicted normalised energy generations of pv
+                panels in each period of the planning horizon (W/kWp) - shape (tau)
             predicted_pricing (np.array): predicted grid electricity price in each period
                 of the planning horizon ($/kWh) - shape (tau)
             predicted_carbon (np.array): predicted grid electricity carbon intensity in each
@@ -668,13 +674,16 @@ class TF_Predictor(BasePredictorModel):
 
         assert hasattr(self, 'buffer'), "You must enter prediction mode by calling `self.initialise_forecasting(tau)` before forecasting can be performed."
         assert all([len(self.models[key])>0 for key in self.models.keys()]), "You must load models for all variables to perform prediction."
-        assert len(self.models['load']) == len(self.models['solar']) == np.array(observations).shape[0], "You must provide the same number of `load` and `solar` models as buildings being predicted for."
+        assert len(self.models['load']) == np.array(observations).shape[0], "You must provide the same number of `load` models as buildings being predicted for."
 
         # Update observation buffers.
         for model_type,obs_id in zip(self.model_types,[self.load_obs_index,self.solar_obs_index,self.pricing_obs_index,self.carbon_obs_index]):
-            if model_type in ['load','solar']:
+            if model_type in ['load']:
                 for j,val in enumerate(np.array(observations)[:, obs_id]):
                     self.buffer[model_type][j].append(val)
+            elif model_type in ['solar']:
+                # process solar observations to be in W/kWp - use 1st building as common to all
+                self.buffer[model_type].append(np.array(observations)[0, obs_id]*1000/self.b0_pv_cap)
             else: # pricing and carbon observations are shared between buildings
                 self.buffer[model_type].append(np.array(observations)[0, obs_id])
 
@@ -717,17 +726,14 @@ class TF_Predictor(BasePredictorModel):
             predicted_loads = np.array(predicted_loads)
 
             # perform solar forecasting
-            predicted_pv_gens = []
             model_type = 'solar'
-            for j,model_name in enumerate(self.model_names[model_type]):
-                model = self.models[model_type][model_name]
-                tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
-                data_df = base_df.copy()
-                data_df[self.solar_col_name] = np.append(self.buffer[model_type][j][-self.L:],np.zeros(self.T))
-                data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
-                solar_prediction = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
-                predicted_pv_gens.append(solar_prediction)
-            predicted_pv_gens = np.array(predicted_pv_gens)
+            model_name = self.model_names[model_type]
+            model = self.models[model_type][model_name]
+            tsds_params = self.get_TimeSeriesDataSet_parameters(model_type,model_name)
+            data_df = base_df.copy()
+            data_df[self.solar_col_name] = np.append(self.buffer[model_type][-self.L:],np.zeros(self.T))
+            data_ds = TimeSeriesDataSet.from_parameters(tsds_params, data_df)
+            predicted_pv_gens = np.array(model.predict(data_ds, mode='prediction')).reshape(self.T)[:self.tau]
 
             # perform pricing forecasting
             model_type = 'pricing'

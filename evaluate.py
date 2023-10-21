@@ -51,7 +51,7 @@ def evaluate(predictor,
     env = CityLearnEnv(schema=schema_path)
 
     # Initialise Predictor object.
-    if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
+    if type(predictor) in [ExamplePredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
 
     # Initialise Linear MPC object.
@@ -97,15 +97,9 @@ def evaluate(predictor,
             else:
                 forecasts = list(forecasts)
                 forecasts[0] = forecasts[0].reshape(len(env.buildings), -1)
-                forecasts[1] = forecasts[1].reshape(len(env.buildings), -1)
+                forecasts[1] = np.array([b.pv.get_generation(forecasts[1]) for b in env.buildings])
                 forecasts[2] = forecasts[2].reshape(-1)
                 forecasts[3] = forecasts[3].reshape(-1)
-
-                # ================================================================
-                # temp fix, avoid solar forecasts and set to be perfect predictions
-                forecasts[1] = np.array(
-                    [b.pv.get_generation(b.energy_simulation.solar_generation)[num_steps+1:num_steps+tau+1]\
-                        for b in env.buildings])
                 # ================================================================
 
                 # setup and solve predictive Linear Program model of system

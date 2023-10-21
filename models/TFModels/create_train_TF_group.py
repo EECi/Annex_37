@@ -33,12 +33,8 @@ def main(model_group_name, model_architecture, predictor_model, UCam_ids, train_
         model_types.append('load')
         model_names.append(f'load_{id}')
         building_indices.append(i)
-        # solar models
-        model_types.append('solar')
-        model_names.append(f'solar_{id}')
-        building_indices.append(i)
-    # pricing & carbon models
-    for m in ['pricing','carbon']:
+    # solar, pricing, and carbon models
+    for m in ['solar','pricing','carbon']:
         model_types.append(m)
         model_names.append(m)
         building_indices.append(None)
