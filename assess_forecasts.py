@@ -16,7 +16,15 @@ import numpy as np
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
-from models import DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor
+from models import (
+    DMSPredictor,
+    TFT_Predictor,
+    NHiTS_Predictor,
+    DeepAR_Predictor,
+    LSTM_Predictor,
+    GRU_Predictor,
+    GRWN_Predictor
+)
 
 
 def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
@@ -84,6 +92,8 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Initialise Predictor object.
     if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
+    elif type(predictor) in [DMSPredictor]:
+        predictor.initialise_forecasting(env)
 
     # ========================================================================
     # insert your import & setup code for your predictor here.
@@ -226,13 +236,15 @@ if __name__ == '__main__':
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
     save = True
-    model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
+    # model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
+    model_name = os.path.join('analysis/linear_0')
     train_building_index = None # int or None - b_id
-    results_file = os.path.join('results', 'prediction_tests_cntrl_sens.csv')
+    # results_file = os.path.join('results', 'prediction_tests_cntrl_sens.csv') # todo from pat: put back I guess
+    results_file = os.path.join('results', 'pat_test.csv')
 
     # Instantiate predictor
-    # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
-    predictor = TFT_Predictor(model_group_name='analysis') # ,model_names=[b_id]*len(UCam_ids)
+    predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    # predictor = TFT_Predictor(model_group_name='analysis') # ,model_names=[b_id]*len(UCam_ids)
     # noise_levels = {
     #     'load': {'UCam_Building_%s'%id: nl for id in UCam_ids},
     #     'solar': {'UCam_Building_%s'%id: nl for id in UCam_ids},
@@ -256,7 +268,7 @@ if __name__ == '__main__':
         load_header = [
             'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
         solar_header = [
-            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]
+            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]   # todo from pat: solar for one building
 
         header += load_header
         header += solar_header
@@ -280,7 +292,7 @@ if __name__ == '__main__':
             for k, v in results['Load Forecasts'].items():
                 if 'average' not in k:
                     out.append(v[metric])
-            for k, v in results['Solar Generation Forecasts'].items():
+            for k, v in results['Solar Generation Forecasts'].items():      # todo from pat: check this works for solar
                 if 'average' not in k:
                     out.append(v[metric])
             with open(results_file, 'a', newline='') as file:

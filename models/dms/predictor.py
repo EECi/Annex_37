@@ -88,8 +88,8 @@ class Predictor(BasePredictorModel):
         self.results_file = os.path.join('models', 'dms', 'resources', results_file)
 
         self.training_order = [f'load_{b}' for b in building_indices]
-        self.training_order += [f'solar_{b}' for b in building_indices]
-        self.training_order += ['carbon', 'price']
+        # self.training_order += [f'solar_{b}' for b in building_indices]   # todo
+        self.training_order += ['solar', 'carbon', 'price']
 
         self.models = {}
         if 'all' in mparam_dict.keys():
@@ -124,6 +124,9 @@ class Predictor(BasePredictorModel):
                     self.models[key].train_flag = False
                 except Exception as e:
                     pass
+
+    def initialise_forecasting(self, env):
+        self.b0_pv_cap = env.buildings[0].pv.nominal_power  # todo
 
     def train(self, patience=25, max_epoch=200):
         """Train all models.
@@ -237,7 +240,6 @@ class Predictor(BasePredictorModel):
             writer.writerow(results)
         return header, results
 
-
     def test_individual(self, building_index=None, dataset_type=None, key=None):
         """Test an individual model.
 
@@ -335,9 +337,9 @@ class Predictor(BasePredictorModel):
         Notes:
             'carbon', 'price' and 'solar is shared between the buildings so will return the same building index.
         """
-        if '_' in key:  # solar, load
+        if '_' in key:  # load
             dataset_type, building_index = key.split('_')
-        else:  # carbon and price
+        else:  # solar, carbon and price
             building_index = self.building_indices[0]
             dataset_type = key
         return building_index, dataset_type
@@ -384,7 +386,8 @@ class Predictor(BasePredictorModel):
         """
 
         current_obs = {
-            'solar': np.array(observations)[:, 21],
+            # 'solar': np.array(observations)[:, 21],     # todo normalise here
+            'solar': np.array(observations)[0, 21].reshape(1)*1000/self.b0_pv_cap,  # todo normalise here
             'load': np.array(observations)[:, 20],
             'carbon': np.array(observations)[0, 19].reshape(1),
             'price': np.array(observations)[0, 24].reshape(1)
@@ -392,12 +395,12 @@ class Predictor(BasePredictorModel):
 
         out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
         for key in self.training_order:
-            building_index, dataset_type = self.key2bd(key)
+            building_index, dataset_type = self.key2bd(key) # todo go into this function and check
             self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
             x = torch.tensor(self.buffer[key], dtype=torch.float32)
             if train_building_index is not None:
-                if '_' in key:  # check for load or solar (building specific), price and carbon is the same for all buildings
+                if '_' in key:  # check for load (building specific), solar, price and carbon is the same for all buildings
                     key = key.split('_')[0] + f'_{train_building_index}'
                     assert key in self.models.keys(), \
                         'models were not trained on the specified train_building_index'
@@ -405,7 +408,8 @@ class Predictor(BasePredictorModel):
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
         load = np.array(out['load'])
-        solar = np.array(out['solar'])
+        # solar = np.array(out['solar'])    # todo
+        solar = np.array(out['solar']).reshape(-1)
         price = np.array(out['price']).reshape(-1)
         carbon = np.array(out['carbon']).reshape(-1)
         return load, solar, price, carbon

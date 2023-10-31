@@ -17,7 +17,16 @@ from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
 from linmodel import LinProgModel
-from models import ExamplePredictor, DMSPredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor
+from models import (
+    ExamplePredictor,
+    DMSPredictor,
+    TFT_Predictor,
+    NHiTS_Predictor,
+    DeepAR_Predictor,
+    LSTM_Predictor,
+    GRU_Predictor,
+    GRWN_Predictor
+)
 
 
 def evaluate(predictor,
@@ -53,6 +62,8 @@ def evaluate(predictor,
     # Initialise Predictor object.
     if type(predictor) in [ExamplePredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
+    elif type(predictor) in [DMSPredictor]:
+        predictor.initialise_forecasting(env)
 
     # Initialise Linear MPC object.
     lp = LinProgModel(env=env)
@@ -192,7 +203,7 @@ if __name__ == '__main__':
     # TODO: add mixed objective clip level option
 
     save = True
-    model_name = os.path.join('analysis','conv_0')
+    model_name = os.path.join('analysis','linear_0')
     train_building_index = None
     results_file = os.path.join('results', 'evaluate_tests_same-train-test--temp.csv')
 

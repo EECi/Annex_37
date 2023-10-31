@@ -272,13 +272,13 @@ class Data(Dataset):
         data = Data(building_index=5, L=48, T=24, dataset_type='load', version='train')
     """
 
-    def __init__(self, building_index=5, L=48, T=24, dataset_type='load', version='train'):
+    def __init__(self, building_index=5, L=48, T=24, dataset_type='load', version='train',
+                 dataset_dir=os.path.join('data', 'analysis')):
         super().__init__()
         self.dataset_type = dataset_type
         self.type2idx = {'load': 0, 'solar': 1, 'price': 2, 'carbon': 3}
         self.type_idx = self.type2idx[dataset_type]
 
-        dataset_dir = os.path.join('data', 'analysis')
         building = pd.read_csv(os.path.join(dataset_dir, version, f'UCam_Building_{building_index}.csv'))
         load = building['Equipment Electric Power [kWh]']
         solar = building['Solar Generation [W/kW]']
