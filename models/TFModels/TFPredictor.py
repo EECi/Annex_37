@@ -418,9 +418,9 @@ class TF_Predictor(BasePredictorModel):
                 data_df[self.load_col_name] = env.buildings[building_index].energy_simulation.non_shiftable_load
                 data_df[self.temp_col_name] = env.buildings[building_index].weather.outdoor_dry_bulb_temperature
             elif model_type == 'solar':
-                data_df[self.solar_col_name] = env.buildings[building_index].energy_simulation.solar_generation
-                data_df[self.dif_irad_col_name] = env.buildings[building_index].weather.diffuse_solar_irradiance
-                data_df[self.dir_irad_col_name] = env.buildings[building_index].weather.direct_solar_irradiance
+                data_df[self.solar_col_name] = env.buildings[0].energy_simulation.solar_generation
+                data_df[self.dif_irad_col_name] = env.buildings[0].weather.diffuse_solar_irradiance
+                data_df[self.dir_irad_col_name] = env.buildings[0].weather.direct_solar_irradiance
             elif model_type == 'pricing':
                 data_df[self.pricing_col_name] = env.buildings[0].pricing.electricity_pricing
             elif model_type == 'carbon':
