@@ -140,8 +140,9 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 for i,_ in enumerate(['load','solar']):
                     f = []
                     for building_index in range(len(env.buildings)):
-                        f.append(predictor.forecasts_buffer[i][0][n:tau + k])
+                        f.append(predictor.forecasts_buffer[i][building_index][n:tau + k])
                     forecasts.append(f)
+
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
@@ -150,12 +151,12 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 """
                 
                 ax.cla()
-                ax.plot(pd.Series(range(n,tau+k)), forecasts[0][3],c='r', label='load_1 forecast')
-                ax.plot(pd.Series(range(n,tau+k)), env.buildings[3].energy_simulation.non_shiftable_load[env.time_step + 1:env.time_step + 1 + tau],
-                         c='k', label='load_1 actual')
-                # ax.plot(pd.Series(range(n,tau+k)), predictor.forecasts_buffer[1][0][n:tau+k], c='r', label='solar_0 forecast')
-                # ax.plot(pd.Series(range(n,tau+k)), env.buildings[1].energy_simulation.solar_generation[num_steps:num_steps + tau],
-                #          c='k', label='solar_0 actual')
+                # ax.plot(pd.Series(range(n,tau+k)), forecasts[0][1],c='r', label='load_1 forecast')
+                # ax.plot(pd.Series(range(n,tau+k)), env.buildings[1].energy_simulation.non_shiftable_load[env.time_step + 1:env.time_step + 1 + tau],
+                #          c='k', label='load_1 actual')
+                ax.plot(pd.Series(range(n,tau+k)), predictor.forecasts_buffer[1][0][n:tau+k], c='r', label='solar_0 forecast')
+                ax.plot(pd.Series(range(n,tau+k)), env.buildings[0].energy_simulation.solar_generation[num_steps:num_steps + tau],
+                         c='k', label='solar_0 actual')
                 ax.set_title('48 hour forecast at time= '+str(num_steps))
                 ax.set_ylim (0, 1000)
                 ax.legend()
@@ -189,8 +190,9 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 for i,_ in enumerate(['load','solar']):
                     f = []
                     for building_index in  range (len(env.buildings)):
-                        f.append (predictor.forecasts_buffer[i][0][n:tau+k])
+                        f.append (predictor.forecasts_buffer[i][building_index][n:tau+k])
                     forecasts.append(f)
+                # forecasts.append(predictor.forecasts_buffer[1][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 

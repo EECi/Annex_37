@@ -117,9 +117,9 @@ class Predictor:
             self.control_buffer[self.controlInputs[0]] = deque(y_[0], maxlen = len(y_[0]))
             self.control_buffer[self.controlInputs[1]] = deque(y_[1], maxlen = len(y_[1]))
 
-            print ('initialised buffer for ',key,' \n ',self.buffer[key])
-            print('initialised control for buffer_diff solar \n ', self.control_buffer['diff_solar'])
-            print('initialised control for buffer_dir solar \n ', self.control_buffer['dir_solar'])
+            # print ('initialised buffer for ',key,' \n ',self.buffer[key])
+            # print('initialised control for buffer_diff solar \n ', self.control_buffer['diff_solar'])
+            # print('initialised control for buffer_dir solar \n ', self.control_buffer['dir_solar'])
 
         # tr_dataset_dir_solar = Data(building_index=5, L=self.L, T=self.tau, dataset_type='dir_solar', version='validate')
         # print ('dir solar \n',tr_dataset_dir_solar)
@@ -145,6 +145,7 @@ class Predictor:
         self.dir_irads = env.buildings[1].weather.direct_solar_irradiance
         if len(self.dif_irads)==0: print ('past observations are empty)')
         self.env = env
+        self.b0_pv_cap = env.buildings[0].pv.nominal_power
 
         df = pd.DataFrame({'a':self.dif_irads})
         # print('initalised inputs \n', self.past_dif_irads)
@@ -236,19 +237,24 @@ class Predictor:
                     '''
                     fit DMDc to snapshots and control inputs       
                     '''
+                    # Store snapshots as dataframe
+                    snapshot_df = pd.DataFrame(snapshots.T)
+
+                    # process solar observations to be in W/kWp
+                    snapshot_df = snapshot_df.apply(lambda x:x*1000/self.b0_pv_cap)
 
                     # Normalise training and control input data
-                    snapshot_df = pd.DataFrame(snapshots.T)
+
                     controlInputs_df = pd.DataFrame.from_dict(self.control_buffer)[-self.L:]
 
                     # controlInputs_df = pd.DataFrame(controlInputs)
 
-                    scaler = MinMaxScaler(feature_range=(0,2))
+                    scaler = MinMaxScaler(feature_range=(0,1))
                     data_df = pd.concat([snapshot_df, controlInputs_df], axis=1)  # concatinate tr + input columns
                     # print('snapshots  \n ', data_df)
                     values_tr = data_df.values
                     values_tr = values_tr.reshape((len(data_df), 3))  # TODO: modularise '3'
-
+                    print('values tr   \n ', values_tr)
                     # scaler = StandardScaler(with_std=False, with_mean=False, copy=True)
 
                     # normalized_snp = scaler.fit_transform(snapshots)
@@ -257,7 +263,8 @@ class Predictor:
 
                     # print('shape of normalized data + inputs ', normalized_snp.T[0].shape)
 
-                    snapshots = normalized_snp.T
+                    snapshots = [normalized_snp.T[0]]
+                    print ('snapshots ', snapshots)
                     # snapshots = data_df.to_numpy().T
 
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
@@ -277,7 +284,6 @@ class Predictor:
                     # print('control inputs 2', controlInputs)
                     # controlInput = observations_inputs
 
-                    print ('training buffer shape \n', len(self.buffer['solar_5']))
 
                     dmd_container.fit(snapshots, controlInputs)
 
