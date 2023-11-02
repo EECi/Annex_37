@@ -99,10 +99,8 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     done = False
 
     observations = env.reset()
-    # print ('observe env \n', observations)
 
     fig, ax = plt.subplots(figsize=(4, 4))
-    # fig2, ax2 = plt.subplots(figsize=(12, 3))
 
     # Execute control loop.
     with tqdm(total=env.time_steps) as pbar:
@@ -115,19 +113,12 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
             # Compute forecast.
 
-
             forecast_start = time.perf_counter()
 
             if num_steps % tau != 0:
                 '''
                 set compute_forecast to False, and slide window across forecast buffer
                 '''
-
-                # observations_inputs = []
-                # for building in env.buildings:
-                #     observations_inputs.append(building.weather.diffuse_solar_irradiance[
-                #                       env.time_step + 1:env.time_step + 1 + tau*2])
-
 
                 # call compute_forecast with False compute flag, to update buffer but not return a forecast
                 print ('observations \n', observations)
@@ -146,8 +137,8 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
                 """
-                Plot selected forecasted signals for debugging within control loop
-                """
+                # Plotting code for selected forecasted signals for debugging within control loop
+                
                 
                 ax.cla()
                 # ax.plot(pd.Series(range(n,tau+k)), forecasts[0][1],c='r', label='load_1 forecast')
@@ -163,6 +154,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
                 # if num_steps == 812:
                 #     input("Press Enter to continue...")
+                """
 
                 n+=1
                 k+=1
@@ -194,41 +186,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
-                #
-                # fig, ax = plt.subplots()
-                # observed_test = np.array([env.buildings[0].energy_simulation.solar_generation[num_steps:num_steps + tau * 2]])
-                #
-                # plt.ion()
-                # # ax.plot(env.buildings[0].energy_simulation.solar_generation[env.time_step+1:env.time_step+1+tau], label='observed tr ')
-                # ax.plot(reconstructed, label='reconstructed ')
-                # ax.plot(np.arange(len(reconstructed), len(reconstructed) + len(forecasts_buffer[1][0]))[:48], forecasts[1][0],
-                #         label='forecast ')
-                #
-                # ax.plot(np.arange(len(reconstructed), len(reconstructed) + len(forecasts_buffer[1][0])), observed_test.reshape(96, ),
-                #         label='observed test ' )
-                # ax.legend()
-                # plt.pause(1)
-                # input("Press Enter to continue...")
-
-                # for f in predictor.forecasts_buffer:
-                #     forecasts.append(f[n:tau+k])
-
-                """
-
-                ax2.set_title(('96 hour buffer forecast at time= '+str(num_steps)))
-
-                # ax2.plot(pd.Series(range(n,tau)), predictor.forecasts_buffer[0][0][:tau], label='load_0 forecast')
-                # ax2.plot(pd.Series(range(n,tau)),env.buildings[0].energy_simulation.non_shiftable_load[env.time_step + 1:env.time_step + 1 + tau],
-                #          label='load_0 actual')
-
-                ax2.plot(pd.Series(range(n,tau)), forecasts[1][0], label='solar_0 forecast')
-                ax2.plot(pd.Series(range(n,tau)), env.buildings[0].energy_simulation.solar_generation[env.time_step + 1:env.time_step + 1 + tau],
-                          label='solar_0 actual')
-                ax2.legend()
-                plt.pause(1)
-                input("Press Enter to continue...")
-                """
-
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
 
@@ -242,17 +199,9 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 for i,b in enumerate(env.buildings):
                     load_logs[b.name]['forecasts'].append(forecasts[0][i])
                     pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i])
-                    # ax.plot(forecasts[0][i], label = 'load_f')
-                    # ax.plot(b.energy_simulation.non_shiftable_load[env.time_step+1:env.time_step+1+tau], label = 'load_a' )
-                    # ax.plot(forecasts[1][i], label = 'solar_f')
-                    # ax.plot(b.energy_simulation.solar_generation[env.time_step+1:env.time_step+1+tau], label='solar_a')
 
                 pricing_logs['forecasts'].append(forecasts[2])
                 carbon_logs['forecasts'].append(forecasts[3])
-                # ax.plot(forecasts[2], label = 'price_f')
-                # ax.plot(b.pricing.electricity_pricing[env.time_step+1:env.time_step+1+tau], label='price_a')
-                # ax.plot(forecasts[3], label = 'carbon_f')
-                # ax.plot(b.carbon_intensity.carbon_intensity[env.time_step+1:env.time_step+1+tau], label='carbon_a')
 
             # Log ground-truth values.
             # note abuse of Python array slicing to give variable length actuals toward end of lists

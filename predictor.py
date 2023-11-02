@@ -174,12 +174,8 @@ class Predictor:
         # ====================================================================
         # insert your forecasting code here
         # ====================================================================
-        # #TODO: need to add observation to buffer - add current observation to the end of the buffer
 
         # update observation
-
-        # print ('forecast time \n ', forecast_time_elapsed)
-
         '''
         observations will be used as training data for the DMD
         observations are updated on each timestep during control loop in assess forecast 
@@ -203,9 +199,6 @@ class Predictor:
             # print ('do not predict for t=0')
             return None  # opt out of prediction if buffer not yet full
 
-        # self.control_buffer['diff_solar'].append(self.dif_irads[t])
-        # self.control_buffer['dir_solar'].append(self.dir_irads[t])
-
         if compute_forecast==True:
 
             controlInputs = []
@@ -222,17 +215,6 @@ class Predictor:
                 self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))]) #appends training data (current observations) to buffer
                 snapshots = np.array([list(self.buffer[key])[-self.L:]])  #only need last L hours from the observation set
 
-                # normalized_inp = scaler.fit_transform(controlInput)
-                # controlInput = normalized_inp
-
-                # controlInput = []
-                # controlInput.append([list(self.control_buffer['diff_solar'])[-self.L:]])
-                # controlInput.append([list(self.control_buffer['dir_solar'])[-self.L:]])
-                # controlInput = np.array(controlInput)
-                # controlInput = np.array(list(self.control_buffer.values())
-                # controlInput = observations_inputs[0]+observations_inputs[1]
-
-
                 if dataset_type == 'solar':
                     '''
                     fit DMDc to snapshots and control inputs       
@@ -240,50 +222,33 @@ class Predictor:
                     # Store snapshots as dataframe
                     snapshot_df = pd.DataFrame(snapshots.T)
 
-                    # process solar observations to be in W/kWp
+                    # Process solar observations to be in W/kWp
                     snapshot_df = snapshot_df.apply(lambda x:x*1000/self.b0_pv_cap)
 
                     # Normalise training and control input data
-
                     controlInputs_df = pd.DataFrame.from_dict(self.control_buffer)[-self.L:]
-
-                    # controlInputs_df = pd.DataFrame(controlInputs)
 
                     scaler = MinMaxScaler(feature_range=(0,1))
                     data_df = pd.concat([snapshot_df, controlInputs_df], axis=1)  # concatinate tr + input columns
-                    # print('snapshots  \n ', data_df)
+
                     values_tr = data_df.values
                     values_tr = values_tr.reshape((len(data_df), 3))  # TODO: modularise '3'
-                    print('values tr   \n ', values_tr)
+
                     # scaler = StandardScaler(with_std=False, with_mean=False, copy=True)
 
                     # normalized_snp = scaler.fit_transform(snapshots)
                     scaler = scaler.fit(values_tr)
                     normalized_snp = scaler.fit_transform(values_tr)
 
-                    # print('shape of normalized data + inputs ', normalized_snp.T[0].shape)
-
                     snapshots = normalized_snp.T
-                    print ('snapshots ', snapshots)
+
                     # snapshots = data_df.to_numpy().T
 
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
                     dmd_container = self.dmdc
 
-
-                    # print('future control values \n ', future_df[t:t+13])
-
-                    # controlInput = np.array(observations[int(building_index)][11])
-                    # controlInput.append(np.array(observations[int(building_index)][15]))
-                    # controlInput = controlInput.reshape()
-
                     # controlInput = base_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']][:self.L].to_numpy()
                     controlInputs = np.array(controlInputs) [:-1].T
-
-                    # controlInputs = snapshots[-2:].T[:-1].T
-                    # print('control inputs 2', controlInputs)
-                    # controlInput = observations_inputs
-
 
                     dmd_container.fit(snapshots, controlInputs)
 
@@ -294,16 +259,6 @@ class Predictor:
                     tunedDMD = mtuner._dmds[0]
                     dmd_container = tunedDMD
 
-                    # print ('control window ', t-self.L+1, ' : ',t+1)
-                    # past_dif_irads = self.past_dif_irads[t - self.L + 1:t + 1]
-                    # past_dir_irads = self.past_dir_irads[t - self.L + 1:t + 1]
-
-
-
-                    # print('control window ', t, ' : ', self.L +t+(self.L))
-                    # future_dif_irads = self.dif_irads[t - self.L + 1 : t +1 ]
-                    # future_dir_irads = self.dir_irads[t - self.L + 1 : t +1 ]
-
                     future_dif_irads = self.dif_irads[t  : self.L +t ]
                     future_dir_irads = self.dir_irads[t  : self.L +t ]
 
@@ -312,9 +267,6 @@ class Predictor:
                         'Direct Solar Radiation [W/m2]': future_dir_irads
                     })
 
-                    # print (snapshots[0])
-                    # print ('First item in control input at time ', t, '\n',controlInput[0])
-                    # print('i=0 \n', controlInput[self.L])
 
                     forecast_controlInput = future_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']].to_numpy()
                     forecast_controlInput = forecast_controlInput [:-1].T
@@ -341,18 +293,12 @@ class Predictor:
                     forecast = forecast_lifted[0][len(snapshots)-2:len(snapshots) -2+ self.tau * 2] #-2 temporarily corrects shift in forecast vs. observer (need to find issue)
                     # forecast = forecast_norm[0][len(snapshots):len(snapshots) + self.tau * 2]
 
-                    # forecast = dmd_container.reconstructed_data(forecast_controlInput).real[0][len(snapshots):len(snapshots) + self.tau * 2]
-
-                    # forecast = pd.DataFrame(scaler.inverse_transform(forecast_norm.T))[len(snapshots):len(snapshots) + self.tau * 2].T.iloc[0]
-
-                    # observed_test = scaler.fit_transform(np.array([self.env.buildings[0].energy_simulation.solar_generation[t:t+self.tau*2]]).T)
                     observed_test = np.array([self.env.buildings[0].energy_simulation.solar_generation[t:t+self.tau*2]])
-                    # c = self.env.buildings[1].energy_simulation.solar_generation[t:t+self.tau*2]
-                    # print('city learn solar gen \n', observed_test)
+
 
                     """
-                    Plot reconstructed and forecasted signals for debugging
-                    """
+                    # Plot reconstructed and forecasted signals for debugging
+                    
                     # fig, ax = plt.subplots()
                     # plt.ion()
                     # ax.plot(snapshots[0].T, label= 'observed tr '+ str(dataset_type))
@@ -366,6 +312,7 @@ class Predictor:
                     # # input("Press Enter to continue...")
                     # plt.clf()
                     # plt.show()
+                    """
 
                 else:
                     # print ('fitting to snapshot data using HODMD')
@@ -382,8 +329,6 @@ class Predictor:
                     def setcontainer ():
                         # print ('key container  ', key )
                         if key == 'load_5': return self.hodmd_250
-                        if key == 'load_11': return self.hodmd_300
-                        if key == 'load_14': return self.hodmd_300
                         if key == 'load_24': return self.hodmd_280
                         else: return self.hodmd_300
 
@@ -403,21 +348,19 @@ class Predictor:
                     forecast for tau *2 (double tau so that we can
                     add one on each timestep to maintain a forecast of tau hours)            
                     '''
-                    # forecast = dmd_container.reconstructed_data.real[0][len(snapshots):len(snapshots)+self.tau*2]
 
                     forecast = dmd_container.reconstructed_data.real[0][len(snapshots):len(snapshots) + self.tau * 2]
-                    # forecast = pd.DataFrame(scaler.inverse_transform(forecast_norm.T))[len(snapshots):len(snapshots) + self.tau * 2]
 
-                    # print ('hodmd forecast shape ', forecast.shape)
                     """
-                    Plot snapshots for debugging
-                    """
+                    # Plot snapshots for debugging
+                    
                     # plt.ion()
                     # ax.plot(snapshots)
                     # ax.plot(forecast, label=dataset_type)
                     # ax.legend()
                     # plt.pause(1)
                     # input("Press Enter to continue...")
+                    """
 
                 # save forecast to output
                 out[dataset_type].append(forecast)
