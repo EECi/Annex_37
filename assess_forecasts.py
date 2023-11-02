@@ -142,7 +142,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                     for building_index in range(len(env.buildings)):
                         f.append(predictor.forecasts_buffer[i][building_index][n:tau + k])
                     forecasts.append(f)
-
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
@@ -192,7 +191,6 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                     for building_index in  range (len(env.buildings)):
                         f.append (predictor.forecasts_buffer[i][building_index][n:tau+k])
                     forecasts.append(f)
-                # forecasts.append(predictor.forecasts_buffer[1][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 

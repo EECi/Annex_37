@@ -263,7 +263,7 @@ class Predictor:
 
                     # print('shape of normalized data + inputs ', normalized_snp.T[0].shape)
 
-                    snapshots = [normalized_snp.T[0]]
+                    snapshots = normalized_snp.T
                     print ('snapshots ', snapshots)
                     # snapshots = data_df.to_numpy().T
 
