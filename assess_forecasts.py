@@ -85,14 +85,13 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
     # insert your import & setup code for your predictor here.
     # ========================================================================
 
-    predictor = Predictor(len(env.buildings), tau)
+    predictor = Predictor(tau=tau)
 
     # Initialise logging objects.
     load_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
     pv_gen_logs = {b.name:{'forecasts':[], 'actuals':[]} for b in env.buildings}
     pricing_logs = {'forecasts':[], 'actuals':[]}
     carbon_logs = {'forecasts':[], 'actuals':[]}
-
 
     # Initialise forecasting loop.
     forecast_time_elapsed = 0
@@ -116,6 +115,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
             # Compute forecast.
 
+
             forecast_start = time.perf_counter()
 
             if num_steps % tau != 0:
@@ -138,7 +138,10 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 forecasts = []
 
                 for i,_ in enumerate(['load','solar']):
-                    forecasts.append([predictor.forecasts_buffer[i][0][n:tau+k], predictor.forecasts_buffer[i][1][n:tau+k]])
+                    f = []
+                    for building_index in range(len(env.buildings)):
+                        f.append(predictor.forecasts_buffer[i][0][n:tau + k])
+                    forecasts.append(f)
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
@@ -184,9 +187,10 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 # select only tau timesteps from the tau*2 forecast in buffer
                 forecasts = []
                 for i,_ in enumerate(['load','solar']):
-                    forecasts.append([predictor.forecasts_buffer[i][0][n:tau+k], predictor.forecasts_buffer[i][1][n:tau+k]])
-                    # forecasts.append(predictor.forecasts_buffer[0][i][n:tau+k])
-                    # forecasts.append(predictor.forecasts_buffer[1][i][n:tau+k])
+                    f = []
+                    for building_index in  range (len(env.buildings)):
+                        f.append (predictor.forecasts_buffer[i][0][n:tau+k])
+                    forecasts.append(f)
                 forecasts.append(predictor.forecasts_buffer[2][n:tau + k])
                 forecasts.append(predictor.forecasts_buffer[3][n:tau + k])
 
@@ -227,11 +231,14 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
 
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
+
+
             # Perform logging.
             if forecasts is None: # forecaster opt out
                 pass # no forecast to evaluate
             else:
                 # Log forecasts.
+
                 for i,b in enumerate(env.buildings):
                     load_logs[b.name]['forecasts'].append(forecasts[0][i])
                     pv_gen_logs[b.name]['forecasts'].append(forecasts[1][i])
@@ -239,6 +246,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                     # ax.plot(b.energy_simulation.non_shiftable_load[env.time_step+1:env.time_step+1+tau], label = 'load_a' )
                     # ax.plot(forecasts[1][i], label = 'solar_f')
                     # ax.plot(b.energy_simulation.solar_generation[env.time_step+1:env.time_step+1+tau], label='solar_a')
+
                 pricing_logs['forecasts'].append(forecasts[2])
                 carbon_logs['forecasts'].append(forecasts[3])
                 # ax.plot(forecasts[2], label = 'price_f')

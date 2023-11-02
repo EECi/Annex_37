@@ -43,7 +43,7 @@ class Predictor:
 
     # def __init__(self, mparam_dict=None, building_indices=(5, 11, 14, 16, 24, 29), L=720, T=48,
     #              hodmd_d=250, expt_name='log_expt', results_file='results.csv', load=False):
-    def __init__(self, N: int, tau: int, building_indices=(5, 11), L=720):
+    def __init__(self, tau: int, building_indices=(5, 11, 14, 16, 24, 29), L=720):
         """Initialise Prediction object and perform setup.
 
         Args:
@@ -61,12 +61,10 @@ class Predictor:
                 training and False for testing.
         """
 
-        self.num_buildings = N
         self.tau = tau
         self.L = L
         self.building_indices = building_indices
         self.env = None
-
         self.training_order = [f'load_{b}' for b in building_indices]
         self.training_order += [f'solar_{b}' for b in building_indices]
         self.training_order += ['carbon', 'price']
@@ -96,7 +94,6 @@ class Predictor:
         self.dir_irads = None
         self.minmaxscaler = None
 
-
         print ('training order \n ', self.training_order)
 
         # initial condition (t=0): load data from validation set into buffer
@@ -110,7 +107,6 @@ class Predictor:
             x = tr_dataset[-1] #we only take the last row hence [-1]
             self.buffer[key] = deque(x, maxlen=len(x))
 
-
         if not self.control_buffer:
             tr_dataset = Data(building_index, self.L, self.tau, dataset_type, 'validate',
                               control_inputs=self.controlInputs)
@@ -120,7 +116,6 @@ class Predictor:
             y_ = y[-1] #only take last window of len L
             self.control_buffer[self.controlInputs[0]] = deque(y_[0], maxlen = len(y_[0]))
             self.control_buffer[self.controlInputs[1]] = deque(y_[1], maxlen = len(y_[1]))
-
 
             print ('initialised buffer for ',key,' \n ',self.buffer[key])
             print('initialised control for buffer_diff solar \n ', self.control_buffer['diff_solar'])
@@ -220,6 +215,7 @@ class Predictor:
 
             for key in self.training_order:
 
+                print (key)
 
                 building_index, dataset_type = self.key2bd(key)
                 self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))]) #appends training data (current observations) to buffer
