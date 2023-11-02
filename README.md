@@ -1,5 +1,21 @@
 
-# Annex 37
+# Annex 37 Sub-task A - Forecasting for Control of Smart Energy Storage Systems
+
+## Analysis & Results
+
+The codebase used to conduct the investigations in the sub-task A report and obtained results are available in the [`EECi` branch](https://github.com/EECi/Annex_37/tree/EECi).
+
+## Outputs
+
+[Annex 37 Sub-task A presentation (Feb 16th 2023) slides](https://docs.google.com/presentation/d/1bR0BVOM6U2C5XhC6FKe8YhmrMTmw-Vnx/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+[Annex 37 Sub-task A update presentation (Apr 11th 2023) slides](https://docs.google.com/presentation/d/1M5aQ369PFi6MjMJxUh9ztM5OaOHgmadQ/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+[Annex 37 Sub-task A milestone presentation (May 18th 2023) slides](https://docs.google.com/presentation/d/1OsSy1ot8a3MZ1yoiklyg-8hWKv0I5mFw/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+[Annex 37 Sub-task A final presentation (Oct 27th 2023) slides](https://docs.google.com/presentation/d/1lePhdWG4ks2Xn9N7DfhPu3IhLMauz4X7/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
+
+<br>
 
 ## Smart design and control of energy storage systems 
 
@@ -171,22 +187,6 @@ len(sublist) == 28 for sublist in observations # observations values as defined 
 **Note: the prediction observations are provided in order to ensure compatibility of the dataset with the CityLearn environment, however as these are perfect predictions taken from the true data, their use for the development of forecasting methods is considered cheating.**
 
 <br>
-
-## Research Direction & Working Results
-
-For up-to-date information on the research questions and modelling approaches being explored, please see the [`EECi` branch](https://github.com/EECi/Annex_37/tree/EECi).
-
-<br>
-
-## Additional Documentation
-
-[Annex 37 Sub-task A presentation (Feb 16th 2023) slides](https://docs.google.com/presentation/d/1bR0BVOM6U2C5XhC6FKe8YhmrMTmw-Vnx/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
-
-[Annex 37 Sub-task A update presentation (Apr 11th 2023) slides](https://docs.google.com/presentation/d/1M5aQ369PFi6MjMJxUh9ztM5OaOHgmadQ/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
-
-[Annex 37 Sub-task A milestone presentation (May 18th 2023) slides](https://docs.google.com/presentation/d/1OsSy1ot8a3MZ1yoiklyg-8hWKv0I5mFw/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
-
-[Annex 37 Sub-task A final presentation (Oct 27th 2023) slides](https://docs.google.com/presentation/d/1lePhdWG4ks2Xn9N7DfhPu3IhLMauz4X7/edit?usp=sharing&ouid=107379212279840102215&rtpof=true&sd=true)
 
 
 ## Further information
