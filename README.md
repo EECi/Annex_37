@@ -14,9 +14,9 @@ For information on the the setup of the task, see the `README` on the `main` bra
         - `Conv`, convolutional neural network (CNN) model
         - `ResMLP`, residual MLP model with skip-connections
     - `TFModels`, complex neural models implemented using [PyTorch Forecasting](https://pytorch-forecasting.readthedocs.io/en/stable/) framework
-        - `[Temporal Fusion Transformers](https://arxiv.org/abs/1912.09363) (TFT)`
-        - `[Neural Hierarchical Interpolaiton for Time Series Forecasting](https://arxiv.org/abs/2201.12886) (NHiTS)`
-        - `[DeepAR](https://arxiv.org/abs/1704.04110)`
+        - `TFT`, [Temporal Fusion Transformers](https://arxiv.org/abs/1912.09363)
+        - `NHiTS`, [Neural Hierarchical Interpolaiton for Time Series Forecasting](https://arxiv.org/abs/2201.12886)
+        - `DeepAR`, [DeepAR](https://arxiv.org/abs/1704.04110)
         - `RNN`, LSTM and GRU models
     - `noise`, explicit noising of perfect forecasts
     - `example`, example model implementation for template
