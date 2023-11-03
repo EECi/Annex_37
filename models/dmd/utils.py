@@ -43,23 +43,12 @@ class Data(Dataset):
         self.columns = ['load', 'solar', 'price', 'carbon']
         if control_inputs != None:
             self.columns += control_inputs
-        raw_data = pd.concat([data_variables[col] for col in self.columns], axis=1)
-        raw_data.columns = self.columns
-        raw_data.index.name = 'time_index'
-        raw_data = raw_data.fillna(0)
-
-        # construct dataframes
-        self.data = []
-        for i in range(len(raw_data)):
-            if i >= len(raw_data) - L + 1:
-                break
-            else:
-                self.data.append([raw_data[col].iloc[i:i + L] for col in self.columns])
-
-        self.data = np.array(self.data, dtype=np.float32)
-
-    def get_df(self):
-        return self.raw_data
+        data_df = pd.concat([data_variables[col] for col in self.columns], axis=1)
+        data_df.columns = self.columns
+        data_df.index.name = 'time_index'
+        data_df = data_df.fillna(0)
+        self.data_df = data_df
+        self.data = np.array(data_df, dtype=np.float32).T
 
     def __len__(self):
-        return len(self.data)
+        return len(self.data.shape[0])

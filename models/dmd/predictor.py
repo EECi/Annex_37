@@ -62,7 +62,6 @@ class Predictor:
         # Create buffer/tracking attributes
         self.buffer = {}
         self.control_buffer= {}
-        self.forecasts_buffer = {}
         self.controlInputs = ['diff_solar', 'dir_solar']
         self.dif_irads = None
         self.dir_irads = None
@@ -80,13 +79,13 @@ class Predictor:
         for key in self.training_order:
             building_index, dataset_type = self.key2bd(key)
             building_dataset = building_dfs[int(building_index)]
-            x = building_dataset.data[building_dataset.columns.index(dataset_type)][-1]
+            x = building_dataset.data[building_dataset.columns.index(dataset_type)][-self.L:]
             self.buffer[key] = deque(x, maxlen=len(x))
 
         for control_input in self.controlInputs: # load data from validation set into control buffer
             building_index = self.building_indices[0]
             building_dataset = building_dfs[building_index]
-            x = building_dataset.data[building_dataset.columns.index(control_input)][-1]
+            x = building_dataset.data[building_dataset.columns.index(control_input)][-self.L:]
             self.control_buffer[control_input] = deque(x, maxlen=len(x))
 
 
@@ -132,6 +131,7 @@ class Predictor:
     def initialise_forecasting(self, env: CityLearnEnv, use_forecast_buffer=True):
 
         self.use_forecast_buffer = use_forecast_buffer
+        self.forecasts_buffer = {key:[] for key in self.training_order}
 
         #self.env = env
         self.simulation_duration = env.time_steps
@@ -196,9 +196,9 @@ class Predictor:
         if all([len(self.forecasts_buffer[key]) >= self.tau for key in self.training_order]) and self.use_forecast_buffer:
             for key in self.training_order:
                 building_index, dataset_type = self.key2bd(key)
-                forecast = self.forecasts_buffer[key][:self.tau]
-                out[dataset_type].append(forecast)
-                self.forecasts_buffer[key].pop(0)
+                forecast = self.forecasts_buffer[key]
+                out[dataset_type].append(forecast[:self.tau])
+                self.forecasts_buffer[key] = self.forecasts_buffer[key][1:] # remove first element from buffer
 
         else: # make a forecast & refill forecast buffer
 
@@ -232,12 +232,14 @@ class Predictor:
                     snapshots = normalized_snp.T
                     # snapshots = data_df.to_numpy().T
 
+                    # NOTE: should the control inputs be normalised too?
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
                     dmd_container = self.dmdc
 
                     # controlInput = base_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']][:self.L].to_numpy()
                     controlInputs = np.array(controlInputs)[:-1].T
 
+                    print(snapshots, np.max(snapshots), controlInputs, np.max(controlInputs))
                     dmd_container.fit(snapshots, controlInputs)
 
                     '''
@@ -257,6 +259,7 @@ class Predictor:
                     })
                     forecast_controlInput = future_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']].to_numpy()
                     forecast_controlInput = forecast_controlInput[:-1].T
+                    # NOTE: again, should we normalise these control inputs?
 
                     '''
                     Forecast for tau *2 (double tau so that we can
@@ -311,7 +314,7 @@ class Predictor:
                 self.forecasts_buffer[key] = forecast
 
                 # save forecast to output
-                out[dataset_type].append(forecast)
+                out[dataset_type].append(forecast[:self.tau])
 
 
         # ====================================================================
