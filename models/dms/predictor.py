@@ -136,7 +136,7 @@ class Predictor(BasePredictorModel):
             max_epoch (int): Maximum number of epochs for which to train each model unless stopped early.
         """
         for key in self.training_order:
-            self.train_individual(key=key, patience=patience, max_epoch=max_epoch)
+            self.train_individual(key=key, dataset_dir=dataset_dir, patience=patience, max_epoch=max_epoch)
 
     def train_individual(self,building_index=None, dataset_type=None, key=None,
                             dataset_dir=os.path.join('data', 'analysis'), patience=25, max_epoch=200):
