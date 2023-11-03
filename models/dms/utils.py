@@ -260,8 +260,8 @@ class Conv(pl.LightningModule):
 
 
 class Data(Dataset):
-    """Represents a dataset for energy consumption (load), solar generation (solar), pricing (price), and carbon intensity
-    (carbon).
+    """Represents a dataset for energy consumption (load), solar generation (solar), grid electricity
+    pricing (price), and carbon intensity (carbon).
     Args:
         building_index (int): The index of the building to use.
         L (int): The length of the input sequence.

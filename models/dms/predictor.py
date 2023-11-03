@@ -88,7 +88,6 @@ class Predictor(BasePredictorModel):
         self.results_file = os.path.join('models', 'dms', 'resources', results_file)
 
         self.training_order = [f'load_{b}' for b in building_indices]
-        # self.training_order += [f'solar_{b}' for b in building_indices]   # todo
         self.training_order += ['solar', 'carbon', 'price']
 
         self.models = {}
@@ -126,19 +125,21 @@ class Predictor(BasePredictorModel):
                     pass
 
     def initialise_forecasting(self, env):
-        self.b0_pv_cap = env.buildings[0].pv.nominal_power  # todo
+        self.b0_pv_cap = env.buildings[0].pv.nominal_power
 
-    def train(self, patience=25, max_epoch=200):
+    def train(self, dataset_dir=os.path.join('data', 'analysis'), patience=25, max_epoch=200):
         """Train all models.
 
         Args:
+            dataset_dir (str): Path to directory containing CityLearn compatiable dataset used to train models.
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train each model unless stopped early.
         """
         for key in self.training_order:
             self.train_individual(key=key, patience=patience, max_epoch=max_epoch)
 
-    def train_individual(self, building_index=None, dataset_type=None, patience=25, max_epoch=200, key=None):
+    def train_individual(self,building_index=None, dataset_type=None, key=None,
+                            dataset_dir=os.path.join('data', 'analysis'), patience=25, max_epoch=200):
         """Train an individual model.
 
         Args:
@@ -146,6 +147,7 @@ class Predictor(BasePredictorModel):
             dataset_type (str): Type of dataset to use for prediction. Must be one of
                 ('solar', 'load', 'carbon', 'price').
             key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
+            dataset_dir (str): Path to directory containing CityLearn compatiable dataset used to train models.
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train the model.
 
@@ -167,9 +169,9 @@ class Predictor(BasePredictorModel):
             building_index, dataset_type = self.key2bd(key)
 
         # datasets
-        train_dataset = Data(building_index, self.L, self.T, dataset_type, 'train')
+        train_dataset = Data(building_index, self.L, self.T, dataset_type, 'train', dataset_dir=dataset_dir)
         train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate')
+        val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate', dataset_dir=dataset_dir)
         val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
         # early stop
@@ -328,7 +330,7 @@ class Predictor(BasePredictorModel):
 
         Args:
             key (str): A string containing the dataset type and building index, separated by an underscore.
-                Example: 'load_5', 'load_11', 'carbon', 'price', 'solar_5'.
+                Example: 'load_5', 'load_11', 'carbon', 'price', 'solar'.
 
         Returns:
             Tuple[int, str]: A tuple containing the building index (int) and dataset type (str).
@@ -350,14 +352,14 @@ class Predictor(BasePredictorModel):
         Args:
             building_index (int): An integer representing the index of the building.
             dataset_type (str): A string representing the type of dataset. It can be one of the following:
-                'solar', 'load', 'price', or 'carbon'.
+                'load', 'solar', 'price', or 'carbon'.
 
         Returns:
-            str: A string representing the key, in the format "<dataset_type>_<building_index>" (load, solar)
-                or "<dataset_type>" ('carbon', 'price).
+            str: A string representing the key, in the format "<dataset_type>_<building_index>" ('load')
+                or "<dataset_type>" ('solar', 'carbon', 'price').
         """
         key = dataset_type
-        if dataset_type not in ('price', 'carbon'):
+        if dataset_type == 'load':
             key += '_' + str(building_index)
         return key
 
@@ -376,9 +378,9 @@ class Predictor(BasePredictorModel):
 
         Returns:
             predicted_loads (np.array): predicted electrical loads of buildings in each
-                period of the planning horizon (kWh) - shape (N, tau)
-            predicted_pv_gens (np.array): predicted energy generations of pv panels in each
-                period of the planning horizon (kWh) - shape (N, tau)
+                period of the planning horizon (kWh) - shape (N,tau)
+            predicted_pv_gens (np.array): predicted normalised energy generations of pv
+                panels in each period of the planning horizon (W/kWp) - shape (tau)
             predicted_pricing (np.array): predicted grid electricity price in each period
                 of the planning horizon ($/kWh) - shape (tau)
             predicted_carbon (np.array): predicted grid electricity carbon intensity in each
@@ -386,16 +388,15 @@ class Predictor(BasePredictorModel):
         """
 
         current_obs = {
-            # 'solar': np.array(observations)[:, 21],     # todo normalise here
-            'solar': np.array(observations)[0, 21].reshape(1)*1000/self.b0_pv_cap,  # todo normalise here
             'load': np.array(observations)[:, 20],
+            'solar': np.array(observations)[0, 21].reshape(1)*1000/self.b0_pv_cap,
             'carbon': np.array(observations)[0, 19].reshape(1),
             'price': np.array(observations)[0, 24].reshape(1)
         }
 
         out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
         for key in self.training_order:
-            building_index, dataset_type = self.key2bd(key) # todo go into this function and check
+            building_index, dataset_type = self.key2bd(key)
             self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
             x = torch.tensor(self.buffer[key], dtype=torch.float32)
@@ -407,9 +408,8 @@ class Predictor(BasePredictorModel):
                     #out[dataset_type].append(self.models[key](x).detach().numpy())
             out[dataset_type].append(self.models[key](x).detach().numpy())
 
-        load = np.array(out['load'])
-        # solar = np.array(out['solar'])    # todo
-        solar = np.array(out['solar']).reshape(-1)
-        price = np.array(out['price']).reshape(-1)
-        carbon = np.array(out['carbon']).reshape(-1)
-        return load, solar, price, carbon
+        predicted_loads = np.array(out['load'])
+        predicted_pv_gens = np.array(out['solar']).reshape(-1)
+        predicted_pricing = np.array(out['price']).reshape(-1)
+        predicted_carbon = np.array(out['carbon']).reshape(-1)
+        return predicted_loads, predicted_pv_gens, predicted_pricing, predicted_carbon

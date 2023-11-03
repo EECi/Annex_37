@@ -102,8 +102,7 @@ def evaluate(predictor,
             forecasts = predictor.compute_forecast(observations, **forecast_kwargs)
             forecast_time_elapsed += time.perf_counter() - forecast_start
 
-            if (forecasts is None) or ((env.time_steps - 1) - env.time_step < tau):   # forecastor opt out
-                # TODO: remove 2nd condition, only required when solar gens are replace with env data
+            if forecasts is None:   # forecastor opt out - ##  or ((env.time_steps - 1) - env.time_step < tau)
                 actions = np.zeros((len(lp.b_inds), 1))
             else:
                 forecasts = list(forecasts)
@@ -120,10 +119,6 @@ def evaluate(predictor,
                 _, _, _, _, alpha_star = lp.solve_LP()
                 actions: np.array = alpha_star[:, 0].reshape(len(lp.b_inds), 1)
                 lp_solver_time_elapsed += time.perf_counter() - lp_start
-
-            # ====================================================================
-            # insert your logging code here
-            # ====================================================================
 
             # Apply action to environment.
             # ====================================================================

@@ -207,7 +207,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
     results = {
         'Load Forecasts': load_metrics,
-        'Solar Generation Forecasts': pv_gen_metrics,
+        'Solar Potential Forecasts': pv_gen_metrics,
         'Pricing Forecasts': pricing_metrics,
         'Carbon Intensity Forecasts': carbon_metrics,
         'Forecast Time': forecast_time_elapsed
@@ -240,7 +240,7 @@ if __name__ == '__main__':
     model_name = os.path.join('analysis/linear_0')
     train_building_index = None # int or None - b_id
     # results_file = os.path.join('results', 'prediction_tests_cntrl_sens.csv') # todo from pat: put back I guess
-    results_file = os.path.join('results', 'pat_test.csv')
+    results_file = os.path.join('results', 'test.csv')
 
     # Instantiate predictor
     predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
@@ -263,15 +263,11 @@ if __name__ == '__main__':
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = assess(predictor, schema_path, tau, building_breakdown=True, train_building_index=train_building_index)
 
-    if save:
-        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C']
-        load_header = [
-            'L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
-        solar_header = [
-            'S'+i.split('_')[-1] for i in results['Solar Generation Forecasts'].keys() if 'average' not in i]   # todo from pat: solar for one building
 
-        header += load_header
-        header += solar_header
+    if save:
+
+        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C', 'S']
+        header += ['L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
 
         if not os.path.exists(results_file):
             with open(results_file, 'w', newline='') as file:
@@ -286,15 +282,13 @@ if __name__ == '__main__':
                 tau,
                 metric,
                 results['Pricing Forecasts'][metric],
-                results['Carbon Intensity Forecasts'][metric]
+                results['Carbon Intensity Forecasts'][metric],
+                results['Solar Potential Forecasts'][metric]
             ]
-
             for k, v in results['Load Forecasts'].items():
                 if 'average' not in k:
                     out.append(v[metric])
-            for k, v in results['Solar Generation Forecasts'].items():      # todo from pat: check this works for solar
-                if 'average' not in k:
-                    out.append(v[metric])
+
             with open(results_file, 'a', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(out)
