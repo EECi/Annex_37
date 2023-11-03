@@ -107,7 +107,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
         n=0
         k=0
         while not done:
-            print ('time step = ', num_steps)
+            # print ('time step = ', num_steps)
             if num_steps%100 == 0:
                 pbar.update(100)
 
@@ -121,7 +121,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 '''
 
                 # call compute_forecast with False compute flag, to update buffer but not return a forecast
-                print ('observations \n', observations)
+                # print ('observations \n', observations)
                 predictor.compute_forecast(env=CityLearnEnv, observations=observations, t=env.time_step, compute_forecast=False)
 
                 # retrieve next tau forecast from stored forecast in buffer

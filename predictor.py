@@ -76,11 +76,11 @@ class Predictor:
 
         self.dmdc = DMDc(svd_rank=-1, opt=True,  svd_rank_omega=1,)
 
-        self.hodmd_250 = HODMD(svd_rank=0.99, svd_rank_extra=0.9, exact=True, opt=True, d=250, forward_backward=True,
+        self.hodmd_250 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=250, forward_backward=True,
                       sorted_eigs='real')
-        self.hodmd_300 = HODMD(svd_rank=0.99, svd_rank_extra=0.9, exact=True, opt=True, d=300, forward_backward=True,
+        self.hodmd_300 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=300, forward_backward=True,
                       sorted_eigs='real')
-        self.hodmd_280 = HODMD(svd_rank=0.99, svd_rank_extra=0.9, exact=True, opt=True, d=280, forward_backward=True,
+        self.hodmd_280 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=280, forward_backward=True,
                       sorted_eigs='real')
         # ====================================================================
 
@@ -208,9 +208,6 @@ class Predictor:
                 # controlInputs.append(np.array([list(self.control_buffer[key])[-self.L:]]))
 
             for key in self.training_order:
-
-                print (key)
-
                 building_index, dataset_type = self.key2bd(key)
                 self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))]) #appends training data (current observations) to buffer
                 snapshots = np.array([list(self.buffer[key])[-self.L:]])  #only need last L hours from the observation set
@@ -229,19 +226,17 @@ class Predictor:
                     controlInputs_df = pd.DataFrame.from_dict(self.control_buffer)[-self.L:]
 
                     scaler = MinMaxScaler(feature_range=(0,1))
-                    data_df = pd.concat([snapshot_df, controlInputs_df], axis=1)  # concatinate tr + input columns
+                    data_df = pd.concat([snapshot_df, controlInputs_df], axis=1)  # concatenate tr + input columns
 
                     values_tr = data_df.values
                     values_tr = values_tr.reshape((len(data_df), 3))  # TODO: modularise '3'
 
                     # scaler = StandardScaler(with_std=False, with_mean=False, copy=True)
-
                     # normalized_snp = scaler.fit_transform(snapshots)
                     scaler = scaler.fit(values_tr)
                     normalized_snp = scaler.fit_transform(values_tr)
 
                     snapshots = normalized_snp.T
-
                     # snapshots = data_df.to_numpy().T
 
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
@@ -252,9 +247,13 @@ class Predictor:
 
                     dmd_container.fit(snapshots, controlInputs)
 
+                    '''
+                    Optional model improvement via stabilising of eigenvalues       
+                    '''
+
                     mtuner = ModesTuner(dmd_container)
                     # mtuner.select('integral_contribution', n=30)
-                    # mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
+                    mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
                     # mtuner.stabilize(inner_radius=-1.e-2, outer_radius=1.e-2)
                     tunedDMD = mtuner._dmds[0]
                     dmd_container = tunedDMD
@@ -335,6 +334,10 @@ class Predictor:
                     dmd_container = setcontainer()
                     dmd_container.fit(snapshots)
                     dmd_container.dmd_time['tend'] = ((self.tau + self.L)) -1
+
+                    '''
+                    Optional model improvement via stabilising of eigenvalues       
+                    '''
 
                     mtuner = ModesTuner(dmd_container)
                     # mtuner.select('integral_contribution', n=30)
