@@ -127,19 +127,22 @@ class Predictor(BasePredictorModel):
     def initialise_forecasting(self, env):
         self.b0_pv_cap = env.buildings[0].pv.nominal_power
 
-    def train(self, dataset_dir=os.path.join('data', 'analysis'), patience=25, max_epoch=200):
+    def train(self, dataset_dir=os.path.join('data', 'analysis'), version_suffix: str = None,
+              patience=25, max_epoch=200):
         """Train all models.
 
         Args:
             dataset_dir (str): Path to directory containing CityLearn compatiable dataset used to train models.
+            version_suffix (str): Suffix identifying dataset directories for reduced length training datasets.
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train each model unless stopped early.
         """
         for key in self.training_order:
-            self.train_individual(key=key, dataset_dir=dataset_dir, patience=patience, max_epoch=max_epoch)
+            self.train_individual(key=key, dataset_dir=dataset_dir, version_suffix=version_suffix, patience=patience, max_epoch=max_epoch)
 
     def train_individual(self,building_index=None, dataset_type=None, key=None,
-                            dataset_dir=os.path.join('data', 'analysis'), patience=25, max_epoch=200):
+                            dataset_dir=os.path.join('data', 'analysis'), version_suffix: str = None,
+                            patience=25, max_epoch=200):
         """Train an individual model.
 
         Args:
@@ -148,6 +151,7 @@ class Predictor(BasePredictorModel):
                 ('solar', 'load', 'carbon', 'price').
             key (str): Represents the dataset type and building index (e.g. 'solar_5', 'load_5, 'price', 'carbon').
             dataset_dir (str): Path to directory containing CityLearn compatiable dataset used to train models.
+            version_suffix (str): Suffix identifying dataset directories for reduced length training datasets.
             patience (int): Number of epochs with no improvement in validation loss before training is stopped early.
             max_epoch (int): Maximum number of epochs for which to train the model.
 
@@ -169,9 +173,11 @@ class Predictor(BasePredictorModel):
             building_index, dataset_type = self.key2bd(key)
 
         # datasets
-        train_dataset = Data(building_index, self.L, self.T, dataset_type, 'train', dataset_dir=dataset_dir)
+        train_dir = 'train' if train_dir is None else 'train'+version_suffix
+        validate_dir = 'validate' if train_dir is None else 'validate'+version_suffix
+        train_dataset = Data(building_index, self.L, self.T, dataset_type, train_dir, dataset_dir=dataset_dir)
         train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        val_dataset = Data(building_index, self.L, self.T, dataset_type, 'validate', dataset_dir=dataset_dir)
+        val_dataset = Data(building_index, self.L, self.T, dataset_type, validate_dir, dataset_dir=dataset_dir)
         val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
         # early stop
