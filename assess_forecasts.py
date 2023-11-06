@@ -156,6 +156,7 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
                 #     input("Press Enter to continue...")
                 """
 
+
                 n+=1
                 k+=1
 
@@ -215,6 +216,10 @@ def assess(schema_path, tau, building_breakdown=False, **kwargs):
             actions = np.zeros((len(env.buildings),1))
             observations, _, done, _ = env.step(actions)
             num_steps += 1
+
+            # Check if enough L is remaining
+            steps_remain = 17520 - num_steps
+            if steps_remain < predictor.L: predictor.L = steps_remain
 
     print("Assessment complete.")
 

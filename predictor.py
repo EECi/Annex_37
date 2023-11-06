@@ -227,23 +227,31 @@ class Predictor:
 
                     scaler = MinMaxScaler(feature_range=(0,1))
                     data_df = pd.concat([snapshot_df, controlInputs_df], axis=1)  # concatenate tr + input columns
-
                     values_tr = data_df.values
                     values_tr = values_tr.reshape((len(data_df), 3))  # TODO: modularise '3'
 
                     # scaler = StandardScaler(with_std=False, with_mean=False, copy=True)
                     # normalized_snp = scaler.fit_transform(snapshots)
-                    scaler = scaler.fit(values_tr)
-                    normalized_snp = scaler.fit_transform(values_tr)
+                    # scaler = scaler.fit(values_tr)
+                    # normalized_snp = scaler.fit_transform(values_tr)
 
-                    snapshots = normalized_snp.T
-                    # snapshots = data_df.to_numpy().T
+                    # snapshots = normalized_snp.T
+                    snapshots = data_df.to_numpy().T
 
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
                     dmd_container = self.dmdc
 
+
                     # controlInput = base_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']][:self.L].to_numpy()
                     controlInputs = np.array(controlInputs) [:-1].T
+
+                    if building_index == '5':
+                        print (t)
+                        print (controlInputs[:,-48:])
+                        print (snapshots[0][-48:])
+                    #
+                    # print ('snapshots ',snapshots.shape)
+                    # print ('control inputs ', controlInputs.shape)
 
                     dmd_container.fit(snapshots, controlInputs)
 
@@ -251,12 +259,12 @@ class Predictor:
                     Optional model improvement via stabilising of eigenvalues       
                     '''
 
-                    mtuner = ModesTuner(dmd_container)
-                    # mtuner.select('integral_contribution', n=30)
-                    mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
-                    # mtuner.stabilize(inner_radius=-1.e-2, outer_radius=1.e-2)
-                    tunedDMD = mtuner._dmds[0]
-                    dmd_container = tunedDMD
+                    # mtuner = ModesTuner(dmd_container)
+                    # # mtuner.select('integral_contribution', n=30)
+                    # mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
+                    # # mtuner.stabilize(inner_radius=-1.e-2, outer_radius=1.e-2)
+                    # tunedDMD = mtuner._dmds[0]
+                    # dmd_container = tunedDMD
 
                     future_dif_irads = self.dif_irads[t  : self.L +t ]
                     future_dir_irads = self.dir_irads[t  : self.L +t ]
@@ -287,13 +295,17 @@ class Predictor:
 
                     #
                     forecast_norm = dmd_container.reconstructed_data(forecast_controlInput).real
-                    forecast_lifted = pd.DataFrame(scaler.inverse_transform(forecast_norm.T))
+                    # forecast_lifted = pd.DataFrame(scaler.inverse_transform(forecast_norm.T))
+
+                    forecast_lifted = forecast_norm
 
                     forecast = forecast_lifted[0][len(snapshots)-2:len(snapshots) -2+ self.tau * 2] #-2 temporarily corrects shift in forecast vs. observer (need to find issue)
                     # forecast = forecast_norm[0][len(snapshots):len(snapshots) + self.tau * 2]
 
                     observed_test = np.array([self.env.buildings[0].energy_simulation.solar_generation[t:t+self.tau*2]])
 
+                    # print ('time step ' , t)
+                    # print('forecast buffer [solar] \n ', self.forecasts_buffer)
 
                     """
                     # Plot reconstructed and forecasted signals for debugging
