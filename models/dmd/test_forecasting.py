@@ -93,14 +93,15 @@ if __name__ == '__main__':
     import warnings
 
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
+    UCam_ids = [5,11,14,16,24,29]
 
     tau = 48  # model prediction horizon (number of timesteps of data predicted)
     T = 24*7*4 # number of time instances to forecast for
-    dataset_dir = os.path.join('analysis', 'test')  # dataset directory
+    dataset_dir = os.path.join('example', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
     print("Initialising predictor.")
-    predictor = DMDPredictor(building_indices=UCam_ids)
+    predictor = DMDPredictor(building_indices=UCam_ids,dataset_dir=os.path.join('data','example'))
 
     with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', module=r'cvxpy')

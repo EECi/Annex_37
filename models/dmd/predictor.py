@@ -141,7 +141,7 @@ class Predictor:
         self.dir_irads = env.buildings[0].weather.direct_solar_irradiance
 
 
-    def compute_forecast(self, observations, t:int):
+    def compute_forecast(self, observations, t: int):
         """Compute forecasts given current observation.
 
         Args:
@@ -193,7 +193,7 @@ class Predictor:
         out = {'solar': [], 'load': [], 'carbon': [], 'price': []}
 
         # use forecast buffer if enough forecasted observations remain
-        if all([len(self.forecasts_buffer[key]) >= self.tau for key in self.training_order]) and self.use_forecast_buffer:
+        if all([len(self.forecasts_buffer[key]) >= self.tau+1 for key in self.training_order]) and self.use_forecast_buffer:
             for key in self.training_order:
                 building_index, dataset_type = self.key2bd(key)
                 forecast = self.forecasts_buffer[key]
@@ -230,16 +230,16 @@ class Predictor:
                     normalized_snp = scaler.fit_transform(values_tr)
 
                     snapshots = normalized_snp.T
-                    # snapshots = data_df.to_numpy().T
+                    snapshots = data_df.to_numpy().T
 
-                    # NOTE: should the control inputs be normalised too?
                     controlInputs = controlInputs_df[self.controlInputs].to_numpy()
                     dmd_container = self.dmdc
 
                     # controlInput = base_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']][:self.L].to_numpy()
                     controlInputs = np.array(controlInputs)[:-1].T
 
-                    print(snapshots, np.max(snapshots), controlInputs, np.max(controlInputs))
+                    print(t)
+                    print(snapshots, np.max(snapshots), controlInputs, np.max(controlInputs), snapshots.shape, controlInputs.shape, snapshots[:,-96:], controlInputs[:,-96:])
                     dmd_container.fit(snapshots, controlInputs)
 
                     '''
@@ -259,7 +259,6 @@ class Predictor:
                     })
                     forecast_controlInput = future_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']].to_numpy()
                     forecast_controlInput = forecast_controlInput[:-1].T
-                    # NOTE: again, should we normalise these control inputs?
 
                     '''
                     Forecast for tau *2 (double tau so that we can
@@ -271,8 +270,9 @@ class Predictor:
                     forecast_norm = dmd_container.reconstructed_data(forecast_controlInput).real
                     forecast_lifted = pd.DataFrame(scaler.inverse_transform(forecast_norm.T))
 
-                    forecast = forecast_lifted[0][len(snapshots)-2:len(snapshots) -2+ self.tau * 2] #-2 temporarily corrects shift in forecast vs. observer (need to find issue)
+                    forecast = np.array(forecast_lifted[0][len(snapshots)-2:len(snapshots) -2+ self.tau * 2]) #-2 temporarily corrects shift in forecast vs. observer (need to find issue)
                     # forecast = forecast_norm[0][len(snapshots):len(snapshots) + self.tau * 2]
+                    print("f:",forecast)
 
                 else:
                     '''
@@ -316,6 +316,11 @@ class Predictor:
                 # save forecast to output
                 out[dataset_type].append(forecast[:self.tau])
 
+                # update buffer with new forecast
+                print(len(forecast))
+                self.forecasts_buffer[key] = forecast[1:]
+
+                if dataset_type == 'solar': print(forecast)
 
         # ====================================================================
         return np.array(out['load']), np.array(out['solar']).reshape(-1), np.array(out['carbon']).reshape(-1), np.array(out['price']).reshape(-1)
