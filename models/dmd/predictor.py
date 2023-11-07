@@ -292,9 +292,6 @@ class Predictor:
 
                     forecast = dmd_container.reconstructed_data.real[0][self.L:self.L+2*self.tau]
 
-                # update buffer with new forecast
-                self.forecasts_buffer[key] = forecast
-
                 # save forecast to output
                 out[dataset_type].append(forecast[:self.tau])
 
