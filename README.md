@@ -20,7 +20,7 @@ For information on the the setup of the task, see the `README` on the `main` bra
         - `RNN`, LSTM and GRU models
     - `noise`, explicit noising of perfect forecasts
     - `example`, example model implementation for template
-- `experiements`, run scripts for performing experiments comprising analyses
+- `experiments`, run scripts for performing experiments comprising analyses
 - `results`, output files containing results of tests performed for conducted analyses
 - `plots`, notebooks for plotting analysis results
 - `utils`, supporting scripts
