@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # b_id = UCam_ids[index]
 
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear_0','resmlp_0','conv_0'] + ['baseline']*3
+    model_names = ['linear','resmlp','conv'] + ['baseline']*3
 
     for predictor_type,mname in zip(predictor_types,model_names):
         model_name = os.path.join('analysis',mname)

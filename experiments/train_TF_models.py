@@ -38,7 +38,7 @@ if __name__ == '__main__':
     data_lengths = ['rd4y','rd2y']
 
     for rd in data_lengths:
-        train_path = os.path.join(dataset_path,'train-%s'%rd)
-        val_path = os.path.join(dataset_path,'validate-%s'%rd)
+        train_path = os.path.join(dataset_path,rd,'train')
+        val_path = os.path.join(dataset_path,rd,'validate')
         model_group_name = 'analysis-%s'%rd
         train_TF_models(model_group_name, model_architecture, predictor_model, UCam_ids, train_path, val_path)
