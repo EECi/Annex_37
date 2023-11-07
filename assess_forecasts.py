@@ -74,7 +74,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
 
     Args:
         predictor (Predictor): instantiated predictor class that inherits from models.BasePredictorModel.
-        schema_path (Str or os.Path): path to schema defining simulation data.
+        schema_path (str or os.Path): path to schema defining simulation data.
         tau (int): length of planning horizon
         building_breakdown (bool): indicator for whether building resolved
         performance metric values are reported. Defaults to 'False'.
@@ -215,6 +215,42 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     return results
 
 
+def save_results(results, results_file):
+    """Save forecasting performance results to CSV.
+    
+    Args:
+        results (dict): dictionary containing forecasting performance results.
+        results_file (str or os.Path): path to CSV file results are saved to.
+    """
+
+    header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C', 'S']
+    header += ['L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
+
+    if not os.path.exists(results_file):
+        with open(results_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+
+    for metric in ['gmnMAE','gmnRMSE']:
+        out = [
+            results['model_name'],
+            results['train_building_index'],
+            results['Forecast Time'],
+            results['tau'],
+            metric,
+            results['Pricing Forecasts'][metric],
+            results['Carbon Intensity Forecasts'][metric],
+            results['Solar Potential Forecasts'][metric]
+        ]
+        for k, v in results['Load Forecasts'].items():
+            if 'average' not in k:
+                out.append(v[metric])
+
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(out)
+
+
 
 if __name__ == '__main__':
     import warnings
@@ -239,19 +275,11 @@ if __name__ == '__main__':
     # model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
     model_name = os.path.join('analysis/linear_0')
     train_building_index = None # int or None - b_id
-    # results_file = os.path.join('results', 'prediction_tests_cntrl_sens.csv') # todo from pat: put back I guess
     results_file = os.path.join('results', 'test.csv')
 
     # Instantiate predictor
     predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
     # predictor = TFT_Predictor(model_group_name='analysis') # ,model_names=[b_id]*len(UCam_ids)
-    # noise_levels = {
-    #     'load': {'UCam_Building_%s'%id: nl for id in UCam_ids},
-    #     'solar': {'UCam_Building_%s'%id: nl for id in UCam_ids},
-    #     'pricing': nl,
-    #     'carbon': nl
-    # }
-    # predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
 
 
     # ==================================================================================================================
@@ -263,32 +291,11 @@ if __name__ == '__main__':
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = assess(predictor, schema_path, tau, building_breakdown=True, train_building_index=train_building_index)
 
+    results.update({
+        'model_name': model_name,
+        'train_building_index': train_building_index if train_building_index is not None else 'same-train-test',
+        'tau': tau
+        })
+    print(results)
 
-    if save:
-
-        header = ['Model Name', 'Train Building', 'Forecast Time (s)', 'Tau (hrs)', 'Metric', 'P', 'C', 'S']
-        header += ['L'+i.split('_')[-1] for i in results['Load Forecasts'].keys() if 'average' not in i]
-
-        if not os.path.exists(results_file):
-            with open(results_file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(header)
-
-        for metric in ['gmnMAE','gmnRMSE']:
-            out = [
-                model_name,
-                train_building_index if train_building_index is not None else 'same-train-test',
-                results['Forecast Time'],
-                tau,
-                metric,
-                results['Pricing Forecasts'][metric],
-                results['Carbon Intensity Forecasts'][metric],
-                results['Solar Potential Forecasts'][metric]
-            ]
-            for k, v in results['Load Forecasts'].items():
-                if 'average' not in k:
-                    out.append(v[metric])
-
-            with open(results_file, 'a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(out)
+    if save: save_results(results, results_file)

@@ -173,6 +173,26 @@ def evaluate(predictor,
     return results
 
 
+def save_results():
+    """Save control performance results to CSV.
+    
+    Args:
+        results (dict): dictionary containing control performance results.
+        results_file (str or os.Path): path to CSV file results are saved to.
+    """
+
+    header = ['Model', 'Forecast Time (s)', 'Solve Time (s)', 'Tau (hrs)', 'Overall', 'Price', 'Carbon', 'Grid']
+    out = [results['model_name'], results['Forecast Time'], results['Solve Time'], results['tau'], results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
+
+    if not os.path.exists(results_file):
+        with open(results_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+    with open(results_file, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(out)
+
+
 if __name__ == '__main__':
     import warnings
 
@@ -180,10 +200,6 @@ if __name__ == '__main__':
 
     # index = int(sys.argv[1]) # for ($var = 0; $var -le 14; $var++) {python assess_forecasts.py $var}
     # b_id = UCam_ids[index]
-    # model_extensions = ['rd4y','rd2y','rd1y','rd6m','rd3m']
-    # me = model_extensions[index]
-    # test_noise_levels = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.1, 0.2]
-    # nl = test_noise_levels[index]
 
     # Set parameters and instantiate predictor
     # ==================================================================================================================
@@ -203,16 +219,8 @@ if __name__ == '__main__':
     results_file = os.path.join('results', 'evaluate_tests_same-train-test--temp.csv')
 
     # Instantiate Predictor
-    # predictor = ExamplePredictor(6, 48)
     predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
     # predictor = TFT_Predictor(model_group_name='analysis')
-    # noise_levels = {
-    #     'load': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
-    #     'solar': {'UCam_Building_%s'%id: 0.0 for id in UCam_ids},
-    #     'pricing': 0.0,
-    #     'carbon': 0.0
-    # }
-    # predictor = GRWN_Predictor(CityLearnEnv(schema=schema_path),tau,noise_levels)
 
 
     # ==================================================================================================================
@@ -224,14 +232,10 @@ if __name__ == '__main__':
         warnings.filterwarnings(action='ignore', module=r'cvxpy')
         results = evaluate(predictor, schema_path, tau, objective_dict, clip_level, train_building_index=train_building_index)
 
-    if save:
-        header = ['Model', 'Overall', 'Price', 'Carbon', 'Grid']
-        out = [model_name, results['Overall Cost'], results['Price Cost'], results['Emissions Cost'], results['Grid Cost']]
+    results.update({
+        'model_name': model_name,
+        'tau': tau
+        })
+    print(results)
 
-        if not os.path.exists(results_file):
-            with open(results_file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(header)
-        with open(results_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(out)
+    if save: save_results(results, results_file)
