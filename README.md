@@ -20,7 +20,9 @@ For information on the the setup of the task, see the `README` on the `main` bra
         - `RNN`, LSTM and GRU models
     - `noise`, explicit noising of perfect forecasts
     - `example`, example model implementation for template
+- `experiements`, run scripts for performing experiments comprising analyses
 - `results`, output files containing results of tests performed for conducted analyses
+- `plots`, notebooks for plotting analysis results
 - `utils`, supporting scripts
 - `assess_forecasts.py`, script to test the quality/accuracy of forecasts provided by models
 - `evaluate.py`, script to test the control performance of prediction models when used in the MPC
