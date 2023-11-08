@@ -173,8 +173,8 @@ class Predictor(BasePredictorModel):
             building_index, dataset_type = self.key2bd(key)
 
         # datasets
-        train_dir = 'train' if train_dir is None else 'train'+version_suffix
-        validate_dir = 'validate' if train_dir is None else 'validate'+version_suffix
+        train_dir = 'train' if version_suffix is None else 'train'+version_suffix
+        validate_dir = 'validate' if version_suffix is None else 'validate'+version_suffix
         train_dataset = Data(building_index, self.L, self.T, dataset_type, train_dir, dataset_dir=dataset_dir)
         train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
         val_dataset = Data(building_index, self.L, self.T, dataset_type, validate_dir, dataset_dir=dataset_dir)

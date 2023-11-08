@@ -27,7 +27,7 @@ from models import (
 )
 
 
-def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=False):
+def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mean_norm=True):
     """Compute mean metric score over set of forecasts corresponding
     to ground truth arrays for specified metric function.
 
@@ -37,8 +37,8 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
         forecasts (length can be less than or equal to corresponding forecast length).
         metric (function): function computing desired forecast performance metric
         for a given forecast and corresponding ground truth (taken as `np.array`s).
-        mean_norm (bool, optional): Whether to normalise the mean metric value by the
-        mean of the underlying ground truth timeseries. Defaults to False.
+        global_mean_norm (bool, optional): Whether to normalise the mean metric value by
+        the mean of the underlying ground truth timeseries. Defaults to True.
 
     Returns:
         metric_score (float): mean metric score over set of forecasts & ground truths.
@@ -55,7 +55,9 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
     metric_score = np.mean(metric_scores)
 
     if global_mean_norm:
-        metric_score = metric_score/np.mean([l[0] for l in ground_truth_array if len(l) > 0])
+        global_mean = np.mean([l[0] for l in ground_truth_array if len(l) > 0])
+        print(global_mean)
+        metric_score = metric_score/global_mean
 
     return metric_score
 
@@ -160,12 +162,11 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Compute forecasting performance metrics.
     metrics = [MAE,RMSE]
     metric_names = ['gmnMAE', 'gmnRMSE']
-    globally_mean_normalised = [True, True]
 
     load_metrics = {
         b.name:{
-            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'], metric, gnorm)\
-                for metric, mname, gnorm in zip(metrics, metric_names, globally_mean_normalised)
+            mname: compute_metric_score(load_logs[b.name]['forecasts'],load_logs[b.name]['actuals'],metric)\
+                for metric, mname in zip(metrics, metric_names)
         } for b in env.buildings
     }
     load_metrics['buildings_average'] = {mname: np.mean([load_metrics[b.name][mname] for b in env.buildings])\
@@ -192,7 +193,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     print("=====Buildings Average=====")
     print("---Load---")
     for mname in metric_names: print(f"{mname}: {round(load_metrics['buildings_average'][mname],5)}")
-    print("---Solar Generation---")
+    print("=====Solar Generation=====")
     for mname in metric_names: print(f"{mname}: {round(pv_gen_metrics[mname],5)}")
     print("=====Pricing=====")
     for mname in metric_names: print(f"{mname}: {round(pricing_metrics[mname],5)}")
@@ -273,7 +274,7 @@ if __name__ == '__main__':
 
     save = True
     # model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
-    model_name = os.path.join('analysis/linear_0')
+    model_name = os.path.join('test/conv_0')
     train_building_index = None # int or None - b_id
     results_file = os.path.join('results', 'test.csv')
 
