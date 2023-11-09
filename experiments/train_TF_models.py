@@ -11,7 +11,7 @@ from models.TFModels.create_train_TF_group import main as train_TF_models
 if __name__ == '__main__':
 
     # Run using
-    # for ($m = 0; $m -le 2; $m++) {for ($rd = 0; $rd -le 2; $rd++) {python -m experiments.data_efficiency $m $rd}}
+    # for ($m = 0; $m -le 2; $m++) {for ($rd = 0; $rd -le 2; $rd++) {python -m experiments.train_TF_models $m $rd}}
     # ==================================================================================================
 
     m = int(sys.argv[1])

@@ -20,7 +20,7 @@ from models import (
 if __name__ == "__main__":
 
     # Run using
-    # for ($m = 0; $m -le 5; $m++) {for ($bid = 0; $bid -le 14; $bid++) {python -m experiments.data_efficiency $m $bid}}
+    # for ($m = 0; $m -le 5; $m++) {for ($bid = 0; $bid -le 14; $bid++) {python -m experiments.generalisation_performance $m $bid}}
     # ==================================================================================================
 
     m = int(sys.argv[1])
