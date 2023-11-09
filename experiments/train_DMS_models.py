@@ -1,6 +1,7 @@
 """Train DMS models required to run experiments."""
 
 import os
+import sys
 import csv
 import time
 import glob
@@ -46,6 +47,13 @@ def get_mparams(model_type):
 
 if __name__ == '__main__':
 
+    # Run using
+    # for ($m = 0; $m -le 2; $m++) {for ($rd = 0; $rd -le 4; $rd++) {python -m experiments.data_efficiency $m $rd}}
+    # ==================================================================================================
+
+    m = int(sys.argv[1])
+    rd = int(sys.argv[2])
+
     model_types = ['linear','resmlp','conv']
     data_lengths = ['baseline','rd4y','rd2y','rd1y','rd6m','rd3m']
 
@@ -56,30 +64,30 @@ if __name__ == '__main__':
     L = 168
     T = 48
 
-    building_indices = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49]
+    UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49]
 
-    for mtype in model_types:
-        for rd in data_lengths:
+    mtype = model_types[m]
+    dl = data_lengths[rd]
 
-            if rd == 'baseline':
-                expt_name =  os.path.join('analysis',mtype)
-                dataset_dir = os.path.join('data','analysis')
-            else:
-                expt_name =  os.path.join('analysis',mtype+'-%s'%rd)
-                dataset_dir = os.path.join('data','analysis','reduced',rd)
+    if dl == 'baseline':
+        expt_name =  os.path.join('analysis',mtype)
+        dataset_dir = os.path.join('data','analysis')
+    else:
+        expt_name =  os.path.join('analysis',mtype+'-%s'%dl)
+        dataset_dir = os.path.join('data','analysis','reduced',dl)
 
-        start = time.time()
-        predictor = Predictor(get_mparams(mtype), building_indices, L, T, expt_name, load=False)
-        predictor.train(patience=100, max_epoch=500, dataset_dir=dataset_dir)
-        end = time.time()
+    start = time.time()
+    predictor = Predictor(get_mparams(mtype), UCam_ids, L, T, expt_name, load=False)
+    predictor.train(patience=100, max_epoch=500, dataset_dir=dataset_dir)
+    end = time.time()
 
-        print("Train time:", end-start)
+    print("Train time:", end-start)
 
-        with open(os.path.join('models','dms','resources',expt_name,'training_time.csv'),'w') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(['Create & train time (s)', end-start])
+    with open(os.path.join('models','dms','resources',expt_name,'training_time.csv'),'w') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['Create & train time (s)', end-start])
 
-        # clear learning rate checkpoints from current directory
-        lr_checkpoint_list = glob.glob('.lr_find*')
-        for lr_checkpoint in lr_checkpoint_list:
-            os.remove(lr_checkpoint)
+    # clear learning rate checkpoints from current directory
+    lr_checkpoint_list = glob.glob('.lr_find*')
+    for lr_checkpoint in lr_checkpoint_list:
+        os.remove(lr_checkpoint)
