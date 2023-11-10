@@ -48,7 +48,7 @@ def get_mparams(model_type):
 if __name__ == '__main__':
 
     # Run using
-    # for ($m = 0; $m -le 2; $m++) {for ($rd = 0; $rd -le 4; $rd++) {python -m experiments.train_DMS_models $m $rd}}
+    # for ($m = 0; $m -le 2; $m++) {for ($rd = 0; $rd -le 5; $rd++) {python -m experiments.train_DMS_models $m $rd}}
     # ==================================================================================================
 
     m = int(sys.argv[1])
