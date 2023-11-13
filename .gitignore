@@ -16,7 +16,8 @@ venv/
 # Mac OS files
 *.DS_STORE
 
-# Temporary plots
+# Temporary files
+temp/*
 temp.html
 
 # add 'ignore' to any experimental folders you want git to ignore
