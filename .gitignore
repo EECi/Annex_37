@@ -17,7 +17,7 @@ venv/
 *.DS_STORE
 
 # Temporary files
-temp/*
+**/temp/*
 temp.html
 
 # add 'ignore' to any experimental folders you want git to ignore
