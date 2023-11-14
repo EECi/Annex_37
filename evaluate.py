@@ -25,7 +25,11 @@ from models import (
     DeepAR_Predictor,
     LSTM_Predictor,
     GRU_Predictor,
-    GRWN_Predictor
+    GRWN_Predictor,
+    ARIMAPredictor,
+    SARIMAXPredictor,
+    XGBPreTPredictor,
+    LGBMOnlinePredictor
 )
 
 
@@ -62,9 +66,9 @@ def evaluate(predictor,
     # Initialise Predictor object.
     if type(predictor) in [ExamplePredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
-    elif type(predictor) in [DMSPredictor]:
+    elif type(predictor) in [DMSPredictor, ARIMAPredictor,SARIMAXPredictor, LGBMOnlinePredictor]:
         predictor.initialise_forecasting(env)
-
+        
     # Initialise Linear MPC object.
     lp = LinProgModel(env=env)
     lp.set_battery_propery_data()
@@ -92,7 +96,7 @@ def evaluate(predictor,
 
             # Set up custom data input for method.
             forecast_kwargs = {}
-            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor]:
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor, LGBMOnlinePredictor, ARIMAPredictor, SARIMAXPredictor]:
                 forecast_kwargs['t'] = env.time_step
             elif type(predictor) in [DMSPredictor]:
                 forecast_kwargs['train_building_index'] = kwargs['train_building_index']
@@ -173,7 +177,7 @@ def evaluate(predictor,
     return results
 
 
-def save_results():
+def save_results(results, results_file):
     """Save control performance results to CSV.
     
     Args:
@@ -203,6 +207,7 @@ if __name__ == '__main__':
 
     # Set parameters and instantiate predictor
     # ==================================================================================================================
+    dataset_dir_for_predictor = os.path.join('data', 'analysis')  # dataset directory
 
     dataset_dir = os.path.join('analysis', 'test')   # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
@@ -214,14 +219,18 @@ if __name__ == '__main__':
     # TODO: add mixed objective clip level option
 
     save = True
-    model_name = os.path.join('analysis','linear_0')
+    # model_name = os.path.join('analysis','linear_0')
+    model_name = os.path.join('analysis','LGBM_0')
+
     train_building_index = None
     results_file = os.path.join('results', 'evaluate_tests_same-train-test--temp.csv')
 
     # Instantiate Predictor
-    predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
+    # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
     # predictor = TFT_Predictor(model_group_name='analysis')
-
+    predictor = LGBMOnlinePredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor)
+    predictor = SARIMAXPredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, use_seasonality=False)
+    predictor = XGBPreTPredictor(len(UCam_ids), tau, "_H1") #(len(lp.b_inds), tau, "_H1")
 
     # ==================================================================================================================
     # Evaluate and save results

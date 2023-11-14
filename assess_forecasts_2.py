@@ -282,15 +282,14 @@ if __name__ == '__main__':
 
     save = True
     # model_name = os.path.join('TFT') # 'linear_1' # todo: set expt name for saving accordingly
-    model_name = os.path.join('test/conv_0')
+    model_name = os.path.join('test/simples')
     train_building_index = None # int or None - b_id
-    results_file = os.path.join('results', 'test.csv')
+    results_file = os.path.join('results', 'test2.csv')
 
     # Instantiate predictor
     # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
     # predictor = TFT_Predictor(model_group_name='analysis') # ,model_names=[b_id]*len(UCam_ids)
-    # predictor = PredictorSimpleML(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor)
-    predictor = SARIMAXPredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, use_seasonality=True)
+    predictor = ARIMAPredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor)
     # predictor = XGBPreTPredictor(len(UCam_ids), tau, "_H1") #(len(lp.b_inds), tau, "_H1")
 
 
