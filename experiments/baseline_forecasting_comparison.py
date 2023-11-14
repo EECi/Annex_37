@@ -34,16 +34,18 @@ if __name__ == "__main__":
     results_file = os.path.join('results', 'prediction_tests_baseline.csv')
 
 
+    model_names = ['linear','resmlp','conv','TFT','NHiTS','DeepAR']
+    expt_names = ['linear','resmlp','conv'] + ['analysis']*3
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear','resmlp','conv'] + ['analysis']*3
 
     model_name = model_names[index]
+    expt_name = expt_names[index]
     predictor_type = predictor_types[index]
 
     if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
-        predictor = predictor_type(model_group_name=model_name)
+        predictor = predictor_type(model_group_name=expt_name)
     elif predictor_type in [DMSPredictor]:
-        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',model_name), load=True)
+        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',expt_name), load=True)
 
     print("Assessing forecasts for model %s."%model_name)
 

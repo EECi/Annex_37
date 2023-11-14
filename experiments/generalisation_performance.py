@@ -32,19 +32,21 @@ if __name__ == "__main__":
     dataset_dir = os.path.join('analysis', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
-    results_file = os.path.join('results', 'test.csv')
+    results_file = os.path.join('results', 'prediction_tests_generalisation.csv')
 
+    model_names = ['linear','resmlp','conv','TFT','NHiTS','DeepAR']
+    expt_names = ['linear','resmlp','conv'] + ['analysis']*3
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear','resmlp','conv'] + ['analysis']*3
 
-    predictor_type = predictor_types[m]
     model_name = model_names[m]
+    expt_name = expt_names[m]
+    predictor_type = predictor_types[m]
     train_building_index = b_id
 
     if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
-        predictor = predictor_type(model_group_name=model_name, model_names=[b_id]*len(UCam_ids))
+        predictor = predictor_type(model_group_name=expt_name, model_names=[b_id]*len(UCam_ids))
     elif predictor_type in [DMSPredictor]:
-        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',model_name), load=True)
+        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',expt_name), load=True)
 
     print("Assessing forecasts for model %s."%model_name)
 
@@ -54,7 +56,7 @@ if __name__ == "__main__":
 
     results.update({
         'model_name': model_name,
-        'train_building_index': 'same-train-test',
+        'train_building_index': b_id,
         'tau': tau
         })
 

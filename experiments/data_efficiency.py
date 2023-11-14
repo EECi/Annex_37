@@ -33,22 +33,24 @@ if __name__ == "__main__":
     dataset_dir = os.path.join('analysis', 'test')  # dataset directory
     schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
-    results_file = os.path.join('results', 'test.csv')
+    results_file = os.path.join('results', 'prediction_tests_data_efficiency.csv')
 
+    model_names = ['linear','resmlp','conv','TFT','NHiTS','DeepAR']
+    expt_names = ['linear','resmlp','conv'] + ['analysis']*3
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear','resmlp','conv'] + ['analysis']*3
 
     me = model_extensions[rd]
     model_name = model_names[m]+'-'+me
+    expt_name = expt_names[m]+'-'+me
     predictor_type = predictor_types[m]
 
     if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
         if me in ['rd4y','rd2y']:
-            predictor = predictor_type(model_group_name=model_name)
+            predictor = predictor_type(model_group_name=expt_name)
         else:
             sys.exit()
     elif predictor_type in [DMSPredictor]:
-        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',model_name), load=True)
+        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',expt_name), load=True)
 
     print("Assessing forecasts for model %s."%model_name)
 
