@@ -36,10 +36,10 @@ if __name__ == "__main__":
     results_file = os.path.join('results', 'test.csv')
 
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear','resmlp','conv'] + ['baseline']*3
+    model_names = ['linear','resmlp','conv'] + ['analysis']*3
 
     me = model_extensions[rd]
-    model_name = os.path.join('analysis',model_names[m]+'-'+me)
+    model_name = model_names[m]+'-'+me
     predictor_type = predictor_types[m]
 
     if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         else:
             sys.exit()
     elif predictor_type in [DMSPredictor]:
-        predictor = predictor_type(building_indices=UCam_ids, expt_name=model_name, load=True)
+        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',model_name), load=True)
 
     print("Assessing forecasts for model %s."%model_name)
 

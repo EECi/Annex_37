@@ -39,15 +39,15 @@ if __name__ == "__main__":
 
 
     predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
-    model_names = ['linear','resmlp','conv'] + ['baseline']*3
+    model_names = ['linear','resmlp','conv'] + ['analysis']*3
 
-    model_name = os.path.join('analysis',model_names[index])
+    model_name = model_names[index]
     predictor_type = predictor_types[index]
 
     if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
         predictor = predictor_type(model_group_name=model_name)
     elif predictor_type in [DMSPredictor]:
-        predictor = predictor_type(building_indices=UCam_ids, expt_name=model_name, load=True)
+        predictor = predictor_type(building_indices=UCam_ids, expt_name=os.path.join('analysis',model_name), load=True)
 
     print("Evaluating controller for model %s."%model_name)
 
