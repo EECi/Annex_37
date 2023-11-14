@@ -42,12 +42,12 @@ if __name__ == "__main__":
     model_name = os.path.join('analysis',model_names[m]+'-'+me)
     predictor_type = predictor_types[m]
 
-    if type(predictor_type) in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
+    if predictor_type in [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]:
         if me in ['rd4y','rd2y']:
             predictor = predictor_type(model_group_name=model_name)
         else:
             sys.exit()
-    elif type(predictor_type) in [DMSPredictor]:
+    elif predictor_type in [DMSPredictor]:
         predictor = predictor_type(building_indices=UCam_ids, expt_name=model_name, load=True)
 
     print("Assessing forecasts for model %s."%model_name)

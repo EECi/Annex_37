@@ -56,7 +56,6 @@ def compute_metric_score(forecasts_array, ground_truth_array, metric, global_mea
 
     if global_mean_norm:
         global_mean = np.mean([l[0] for l in ground_truth_array if len(l) > 0])
-        print(global_mean)
         metric_score = metric_score/global_mean
 
     return metric_score
