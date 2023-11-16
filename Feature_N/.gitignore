@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# IDE configurations
+.idea
+.vscode
+
+# Mac OS files
+*.DS_STORE
+
+# Temporary plots
+temp.html
+
+# add 'ignore' to any experimental folders you want git to ignore
+**/*ignore*/

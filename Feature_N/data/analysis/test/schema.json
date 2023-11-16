@@ -1,0 +1,863 @@
+{
+    "root_directory": null,
+    "central_agent": false,
+    "simulation_start_time_step": 0,
+    "simulation_end_time_step": 17519,
+    "episodes": 1,
+    "seconds_per_time_step": 3600,
+    "observations": {
+        "month": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "day_type": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "hour": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "daylight_savings_status": {
+            "active": false,
+            "shared_in_central_agent": true
+        },
+        "outdoor_dry_bulb_temperature": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_dry_bulb_temperature_predicted_6h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_dry_bulb_temperature_predicted_12h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_dry_bulb_temperature_predicted_24h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_relative_humidity": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_relative_humidity_predicted_6h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_relative_humidity_predicted_12h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "outdoor_relative_humidity_predicted_24h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "diffuse_solar_irradiance": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "diffuse_solar_irradiance_predicted_6h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "diffuse_solar_irradiance_predicted_12h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "diffuse_solar_irradiance_predicted_24h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "direct_solar_irradiance": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "direct_solar_irradiance_predicted_6h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "direct_solar_irradiance_predicted_12h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "direct_solar_irradiance_predicted_24h": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "carbon_intensity": {
+            "active": true,
+            "shared_in_central_agent": true
+        },
+        "indoor_dry_bulb_temperature": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "average_unmet_cooling_setpoint_difference": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "indoor_relative_humidity": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "non_shiftable_load": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "solar_generation": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "cooling_storage_soc": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "heating_storage_soc": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "dhw_storage_soc": {
+            "active": false,
+            "shared_in_central_agent": false
+        },
+        "electrical_storage_soc": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "net_electricity_consumption": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "electricity_pricing": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "electricity_pricing_predicted_6h": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "electricity_pricing_predicted_12h": {
+            "active": true,
+            "shared_in_central_agent": false
+        },
+        "electricity_pricing_predicted_24h": {
+            "active": true,
+            "shared_in_central_agent": false
+        }
+    },
+    "actions": {
+        "cooling_storage": {
+            "active": false
+        },
+        "heating_storage": {
+            "active": false
+        },
+        "dhw_storage": {
+            "active": false
+        },
+        "electrical_storage": {
+            "active": true
+        }
+    },
+    "agent": {
+        "type": null
+    },
+    "reward_function": {
+        "type": "citylearn.reward_function.RewardFunction",
+        "attributes": null
+    },
+    "buildings": {
+        "UCam_Building_0": {
+            "include": true,
+            "energy_simulation": "UCam_Building_0.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 4246.0,
+                    "nominal_power": 531.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 461.0
+                }
+            }
+        },
+        "UCam_Building_3": {
+            "include": true,
+            "energy_simulation": "UCam_Building_3.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 478.0,
+                    "nominal_power": 60.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 38.0
+                }
+            }
+        },
+        "UCam_Building_9": {
+            "include": true,
+            "energy_simulation": "UCam_Building_9.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 108.0,
+                    "nominal_power": 14.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 20.0
+                }
+            }
+        },
+        "UCam_Building_11": {
+            "include": true,
+            "energy_simulation": "UCam_Building_11.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 2736.0,
+                    "nominal_power": 342.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 41.0
+                }
+            }
+        },
+        "UCam_Building_12": {
+            "include": true,
+            "energy_simulation": "UCam_Building_12.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 780.0,
+                    "nominal_power": 98.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 89.0
+                }
+            }
+        },
+        "UCam_Building_15": {
+            "include": true,
+            "energy_simulation": "UCam_Building_15.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 1622.0,
+                    "nominal_power": 203.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 143.0
+                }
+            }
+        },
+        "UCam_Building_16": {
+            "include": true,
+            "energy_simulation": "UCam_Building_16.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 2448.0,
+                    "nominal_power": 306.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 120.0
+                }
+            }
+        },
+        "UCam_Building_25": {
+            "include": true,
+            "energy_simulation": "UCam_Building_25.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 2198.0,
+                    "nominal_power": 275.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 118.0
+                }
+            }
+        },
+        "UCam_Building_26": {
+            "include": true,
+            "energy_simulation": "UCam_Building_26.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 8006.0,
+                    "nominal_power": 1001.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 136.0
+                }
+            }
+        },
+        "UCam_Building_32": {
+            "include": true,
+            "energy_simulation": "UCam_Building_32.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 1255.0,
+                    "nominal_power": 157.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 166.0
+                }
+            }
+        },
+        "UCam_Building_38": {
+            "include": true,
+            "energy_simulation": "UCam_Building_38.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 461.0,
+                    "nominal_power": 58.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 46.0
+                }
+            }
+        },
+        "UCam_Building_44": {
+            "include": true,
+            "energy_simulation": "UCam_Building_44.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 8674.0,
+                    "nominal_power": 1084.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 663.0
+                }
+            }
+        },
+        "UCam_Building_45": {
+            "include": true,
+            "energy_simulation": "UCam_Building_45.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 9962.0,
+                    "nominal_power": 1245.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 437.0
+                }
+            }
+        },
+        "UCam_Building_48": {
+            "include": true,
+            "energy_simulation": "UCam_Building_48.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 4973.0,
+                    "nominal_power": 622.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 500.0
+                }
+            }
+        },
+        "UCam_Building_49": {
+            "include": true,
+            "energy_simulation": "UCam_Building_49.csv",
+            "weather": "weather.csv",
+            "carbon_intensity": "carbon_intensity.csv",
+            "pricing": "pricing.csv",
+            "inactive_observations": [],
+            "inactive_actions": [],
+            "electrical_storage": {
+                "type": "citylearn.energy_model.Battery",
+                "autosize": false,
+                "attributes": {
+                    "capacity": 458.0,
+                    "nominal_power": 57.0,
+                    "capacity_loss_coefficient": 1e-05,
+                    "loss_coefficient": 0,
+                    "power_efficiency_curve": [
+                        [
+                            0,
+                            0.9
+                        ],
+                        [
+                            1,
+                            0.9
+                        ]
+                    ],
+                    "capacity_power_curve": [
+                        [
+                            0,
+                            1
+                        ],
+                        [
+                            1,
+                            1
+                        ]
+                    ]
+                }
+            },
+            "pv": {
+                "type": "citylearn.energy_model.PV",
+                "autosize": false,
+                "attributes": {
+                    "nominal_power": 258.0
+                }
+            }
+        }
+    }
+}
