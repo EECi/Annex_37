@@ -34,9 +34,9 @@ if __name__ == "__main__":
 
     results_file = os.path.join('results', 'prediction_tests_generalisation.csv')
 
-    model_names = ['linear','resmlp','conv','TFT','NHiTS','DeepAR']
-    expt_names = ['linear','resmlp','conv'] + ['analysis']*3
-    predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor,DeepAR_Predictor]
+    model_names = ['linear','resmlp','conv','TFT','NHiTS']
+    expt_names = ['linear','resmlp','conv'] + ['analysis']*2
+    predictor_types = [DMSPredictor]*3 + [TFT_Predictor,NHiTS_Predictor]
 
     model_name = model_names[m]
     expt_name = expt_names[m]
