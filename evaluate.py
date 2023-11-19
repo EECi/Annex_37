@@ -173,7 +173,7 @@ def evaluate(predictor,
     return results
 
 
-def save_results():
+def save_results(results, results_file):
     """Save control performance results to CSV.
     
     Args:
