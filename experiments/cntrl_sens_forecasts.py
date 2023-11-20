@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     noise_levels = {
         'load': {'UCam_Building_%s'%id: nl for id in UCam_ids},
-        'solar': {'UCam_Building_%s'%id: nl for id in UCam_ids},
+        'solar': nl,
         'pricing': nl,
         'carbon': nl
     }
