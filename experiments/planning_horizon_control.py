@@ -18,6 +18,8 @@ if __name__ == "__main__":
     # for ($ph = 0; $ph -le 12; $ph++) {python -m experiments.planning_horizon_control $ph}
     # ==================================================================================================
 
+    # NOTE: evaluation fails for tau >= 96 due to ill-conditioned LPs in some time instances
+
     index = int(sys.argv[1])
 
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
