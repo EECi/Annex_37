@@ -11,7 +11,7 @@ import numpy as np
 import random
 
 
-def get_mparams(model_type):
+def get_mparams(model_type, L ,T):
 
     if model_type == 'linear':
         mparam_dict = {'all': {'model_name': 'vanilla',
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         dataset_dir = os.path.join('data','analysis','reduced',dl)
 
     start = time.time()
-    predictor = Predictor(get_mparams(mtype), UCam_ids, L, T, expt_name, load=False)
+    predictor = Predictor(get_mparams(mtype,L,T), UCam_ids, L, T, expt_name, load=False)
     predictor.train(patience=100, max_epoch=500, dataset_dir=dataset_dir)
     end = time.time()
 

@@ -69,7 +69,7 @@ def create_cp_training_datasets(building_id: int, changepoint_timestamp: str):
         shutil.copy(os.path.join(validate_path,file),os.path.join(save_path,'validate',file))
 
 
-def create_and_train_cp_model(b_id: int, cp: str, expt_name: str):
+def create_and_train_cp_model(b_id: int, cp: str, expt_name: str, L: int, T: int):
     """Create Linear model and training data for specified changepoint
     and building, and train.
 
@@ -78,15 +78,18 @@ def create_and_train_cp_model(b_id: int, cp: str, expt_name: str):
         changepoint_timestamp (str): Timestamp of changepoint to use for creating
         training data. Must be in format '%Y-%m-%d'.
         expt_name (str): Path of dir to save model training logs.
+        L (int): The length of the input sequence for linear model.
+        T (int): Length of planning horizon for linear model.
     """
 
+    print("Training changepoint Linear model for building %s with changepoint %s\n"%(b_id,cp))
 
     dataset_dir = os.path.join('data','analysis','changepoint','temp')
 
     create_cp_training_datasets(b_id, cp)
 
     start = time.time()
-    predictor = Predictor(get_mparams('linear'), [b_id], L, T, expt_name, load=False)
+    predictor = Predictor(get_mparams('linear',L,T), [b_id], L, T, expt_name, load=False)
     for var in ['solar', 'carbon', 'price']:
         predictor.training_order.remove(var)
     predictor.train(patience=100, max_epoch=500, dataset_dir=dataset_dir)
@@ -129,7 +132,7 @@ if __name__ == '__main__':
         # ========================================================
         for b_id in UCam_ids:
             expt_name =  os.path.join('analysis','changepoint','linear_b%s-cp-baseline'%b_id)
-            create_and_train_cp_model(b_id, '2000-01-01', expt_name)
+            create_and_train_cp_model(b_id, '2000-01-01', expt_name, L, T)
 
     elif index == 1:
         # Train models for single changepoint analysis
@@ -138,10 +141,10 @@ if __name__ == '__main__':
             single_changepoints = json.load(json_file)['data']
 
         for b_id in UCam_ids:
-            cp = single_changepoints[b_id]
+            cp = single_changepoints[str(b_id)]
             if cp is not None:
                 expt_name =  os.path.join('analysis','changepoint','linear_b%s-scp'%b_id)
-                create_and_train_cp_model(b_id, cp, expt_name)
+                create_and_train_cp_model(b_id, cp, expt_name, L ,T)
 
     elif index == 2:
         # Train models for multiple changepoint analysis
@@ -150,11 +153,12 @@ if __name__ == '__main__':
             multiple_changepoints = json.load(json_file)['data']
 
         for b_id in multiple_changepoints.keys():
+            b_id = int(b_id)
             # NOTE: '%Y-%m-%d' format allows dates to be sorted as strings
-            cps = sorted([multiple_changepoints[b_id][i]['date'] for i in range(len(multiple_changepoints[b_id]))])
+            cps = sorted([multiple_changepoints[str(b_id)][i]['date'] for i in range(len(multiple_changepoints[str(b_id)]))])
             for j,cp in enumerate(cps):
                 expt_name =  os.path.join('analysis','changepoint','linear_b%s-mcp%s'%(b_id,j))
-                create_and_train_cp_model(b_id, cp, expt_name)
+                create_and_train_cp_model(b_id, cp, expt_name, L, T)
 
     else:
         raise ValueError("Command line index argument must be in range 0-2.")
