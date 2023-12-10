@@ -1,0 +1,52 @@
+{
+    "_comment": "Selected 7 buildings where the trend changepoints are expected to most improved model performance (i.e. highest probs and best spread). For these buildings, the 5 highest probability valid changepoints (in period mid. 2010 to mid. 2016) are used for training (unless fewer than 5 sensible changepoints exist). Testing is performance in chronological order. This also gives a nice spread across mean loads and similarity scores.",
+    "data": {
+        "9": [
+            {"date": "2010-10-01","probability": "0.96788013"},
+            {"date": "2013-04-08","probability": "0.960880578"},
+            {"date": "2016-06-15","probability": "0.93940115"},
+            {"date": "2011-11-19","probability": "0.93026042"},
+            {"date": "2014-05-02","probability": "0.92242074"}
+        ],
+        "12": [
+            {"date": "2015-07-15","probability": "0.995780289"},
+            {"date": "2014-06-13","probability": "0.755980074"},
+            {"date": "2013-06-18","probability": "0.233599991"}
+        ],
+        "15": [
+            {"date": "2012-01-30","probability": "0.610359907"},
+            {"date": "2014-01-19","probability": "0.374419808"},
+            {"date": "2015-02-10","probability": "0.323979706"},
+            {"date": "2016-02-17","probability": "0.214819774"},
+            {"date": "2010-10-23","probability": "0.122279979"}
+        ],
+        "16": [
+            {"date": "2011-10-31","probability": "0.999999702"},
+            {"date": "2015-10-18","probability": "0.995499671"},
+            {"date": "2012-05-02","probability": "0.95653969"},
+            {"date": "2014-02-04","probability": "0.920319855"},
+            {"date": "2016-05-09","probability": "0.6939798"}
+        ],
+        "25": [
+            {"date": "2013-07-16","probability": "0.876540065"},
+            {"date": "2012-03-18","probability": "0.705060184"},
+            {"date": "2015-01-24","probability": "0.640940011"},
+            {"date": "2014-07-04","probability": "0.498439968"},
+            {"date": "2011-06-28","probability": "0.313079983"}
+        ],
+        "26": [
+            {"date": "2014-04-29","probability": "0.658500493"},
+            {"date": "2016-02-18","probability": "0.58376044"},
+            {"date": "2012-07-13","probability": "0.533340216"},
+            {"date": "2013-05-15","probability": "0.19922021"},
+            {"date": "2011-01-09","probability": "0.118540034"}
+        ],
+        "44": [
+            {"date": "2012-07-27","probability": "0.987479925"},
+            {"date": "2014-01-19","probability": "0.960499763"},
+            {"date": "2010-08-20","probability": "0.725340009"},
+            {"date": "2011-07-20","probability": "0.683699608"},
+            {"date": "2016-02-23","probability": "0.253079802"}
+        ]
+    }
+}

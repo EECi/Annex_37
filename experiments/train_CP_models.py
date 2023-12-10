@@ -5,7 +5,9 @@ greater allowable range for changepoint locations while maintaining sufficient
 train & validate dataset sizes."""
 
 import os
+import sys
 import csv
+import json
 import time
 import glob
 import shutil
@@ -105,6 +107,13 @@ def create_and_train_cp_model(b_id: int, cp: str, expt_name: str):
 
 if __name__ == '__main__':
 
+    # Run using
+    # for ($var = 0; $var -le 2; $var++) {python -m experiments.train_CP_models $var}
+    # or split into separate runs
+    # ==================================================================================================
+
+    index = int(sys.argv[1])
+
     seed = 0
     torch.manual_seed(seed)
     random.seed(seed)
@@ -114,21 +123,38 @@ if __name__ == '__main__':
 
     UCam_ids = [0,3,9,11,12,15,16,25,26,32,38,44,45,48,49] # set as list of same int to test model on different buildings
 
-    # Train models for single changepoint analysis
-    # ===========================================
-    single_changepoints = [...] # get from Monika spreadsheet
+    if index == 0:
+        # Train baselime models for changepoint analysis
+        # i.e. models trained using 7yr train set and 1yr test set
+        # ========================================================
+        for b_id in UCam_ids:
+            expt_name =  os.path.join('analysis','changepoint','linear_b%s-cp-baseline'%b_id)
+            create_and_train_cp_model(b_id, '2000-01-01', expt_name)
 
-    for b_id, cp in zip(UCam_ids,single_changepoints):
-        expt_name =  os.path.join('analysis','changepoint','linear_b%s-scp'%b_id)
-        create_and_train_cp_model(b_id, cp, expt_name)
+    elif index == 1:
+        # Train models for single changepoint analysis
+        # ============================================
+        with open(os.path.join('data','analysis','changepoint','single_changepoints.json'),'r') as json_file:
+            single_changepoints = json.load(json_file)['data']
 
-    # Train models for multiple changepoint analysis
-    # ==============================================
-    multiple_changepoints = {
-        ...: ... # b_id: list of changepoints
-    } # get from Monika spreadsheet
+        for b_id in UCam_ids:
+            cp = single_changepoints[b_id]
+            if cp is not None:
+                expt_name =  os.path.join('analysis','changepoint','linear_b%s-scp'%b_id)
+                create_and_train_cp_model(b_id, cp, expt_name)
 
-    for b_id in multiple_changepoints.keys():
-        for j,cp in enumerate(multiple_changepoints[b_id]):
-            expt_name =  os.path.join('analysis','changepoint','linear_b%s-mcp%s'%(b_id,j))
-            create_and_train_cp_model(b_id, cp, expt_name)
+    elif index == 2:
+        # Train models for multiple changepoint analysis
+        # ==============================================
+        with open(os.path.join('data','analysis','changepoint','multiple_changepoints.json'),'r') as json_file:
+            multiple_changepoints = json.load(json_file)['data']
+
+        for b_id in multiple_changepoints.keys():
+            # NOTE: '%Y-%m-%d' format allows dates to be sorted as strings
+            cps = sorted([multiple_changepoints[b_id][i]['date'] for i in range(len(multiple_changepoints[b_id]))])
+            for j,cp in enumerate(cps):
+                expt_name =  os.path.join('analysis','changepoint','linear_b%s-mcp%s'%(b_id,j))
+                create_and_train_cp_model(b_id, cp, expt_name)
+
+    else:
+        raise ValueError("Command line index argument must be in range 0-2.")
