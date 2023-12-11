@@ -90,8 +90,6 @@ def create_and_train_cp_model(b_id: int, cp: str, expt_name: str, L: int, T: int
 
     start = time.time()
     predictor = Predictor(get_mparams('linear',L,T), [b_id], L, T, expt_name, load=False)
-    for var in ['solar', 'carbon', 'price']:
-        predictor.training_order.remove(var)
     predictor.train(patience=100, max_epoch=500, dataset_dir=dataset_dir)
     end = time.time()
 

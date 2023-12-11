@@ -2,6 +2,7 @@
 
 import os
 import sys
+import json
 import warnings
 
 import numpy as np
@@ -42,38 +43,78 @@ if __name__ == "__main__":
     # Construct schedule of changepoint models to test
     # ===========================================================
     test_building_ids = []
+    test_change_points = []
     test_expt_names = []
 
-    single_changepoints = [...] # get from Monika spreadsheet
-    for b_id, cp in zip(UCam_ids,single_changepoints):
-        expt_name = 'linear_b%s-scp'%b_id
-        test_building_ids.append(b_id)
-        test_expt_names.append(expt_name)
 
-    multiple_changepoints = {
-        ...: ... # b_id: list of changepoints
-    } # get from Monika spreadsheet
+    for b_id in UCam_ids:
+        expt_name =  os.path.join('analysis','changepoint','linear_b%s-cp-baseline'%b_id)
+        test_building_ids.append(b_id)
+        test_change_points.append('None')
+        test_change_points.append(expt_name)
+
+
+    with open(os.path.join('data','analysis','changepoint','single_changepoints.json'),'r') as json_file:
+        single_changepoints = json.load(json_file)['data']
+
+    for b_id in UCam_ids:
+        cp = single_changepoints[str(b_id)]
+        if cp is not None:
+            expt_name = 'linear_b%s-scp'%b_id
+            test_building_ids.append(b_id)
+            test_change_points.append(cp)
+            test_expt_names.append(expt_name)
+
+
+    with open(os.path.join('data','analysis','changepoint','multiple_changepoints.json'),'r') as json_file:
+        multiple_changepoints = json.load(json_file)['data']
+
     for b_id in multiple_changepoints.keys():
-        for j,cp in enumerate(multiple_changepoints[b_id]):
+        b_id = int(b_id)
+        # NOTE: '%Y-%m-%d' format allows dates to be sorted as strings
+        cps = sorted([multiple_changepoints[str(b_id)][i]['date'] for i in range(len(multiple_changepoints[str(b_id)]))])
+        for j,cp in enumerate(cps):
             expt_name =  'linear_b%s-mcp%s'%(b_id,j)
             test_building_ids.append(b_id)
+            test_change_points.append(cp)
             test_expt_names.append(expt_name)
 
 
     # Assess quality of forecasts for changepoint models
     # ==================================================
-    for b_id, expt_name in zip(test_building_ids, test_expt_names):
+    for b_id, cp, expt_name in zip(test_building_ids, test_change_points, test_expt_names):
         linear_predictor = DMSPredictor(building_indices=[b_id], expt_name=os.path.join('analysis','changepoint',expt_name), load=True)
         predictor = BuildingForecastsOnlyWrapper(linear_predictor, tau)
+
+        # adjust schema so only building with changepoint active
+        schema_dict = json.load(schema_path)
+        for id in UCam_ids:
+            if id != b_id:
+                schema_dict['buildings']['UCam_Building_%s'%id]['include'] = False
 
         print("Assessing forecasts for model %s."%expt_name)
 
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', module=r'cvxpy')
-            results = assess(predictor, schema_path, tau, building_breakdown=True, train_building_index=None)
+            results = assess(predictor, schema_dict, tau, building_breakdown=True, train_building_index=None)
+
+        # adjust results dict to place 'None' entry for all untested variables
+        metric_names = ['gmnMAE', 'gmnRMSE']
+
+        results['Load Forecasts'] = {
+            'UCam_Building_%s'%id: {
+                mname: results['Load Forecasts']['UCam_Building_%s'%b_id][mname] if id == b_id else 'None'\
+                    for mname in metric_names
+            } for id in UCam_ids
+        }
+        for vname in ['Solar Potential Forecasts','Pricing Forecasts','Carbon Intensity Forecasts']:
+            for mname in metric_names:
+                results[vname][mname] = 'None'
 
         results.update({
-            'model_name': expt_name,
+            'building_id': b_id,
+            'change_point': cp,
+            'model_name': expt_name+'-cp_%s'%cp,
             'train_building_index': 'same-train-test',
             'tau': tau
             })
