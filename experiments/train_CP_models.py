@@ -132,7 +132,7 @@ if __name__ == '__main__':
         # ========================================================
         for b_id in UCam_ids:
             expt_name =  os.path.join('analysis','changepoint','linear_b%s-cp-baseline'%b_id)
-            create_and_train_cp_model(b_id, '2000-01-01', expt_name, L, T)
+            create_and_train_cp_model(b_id, '2010-01-01', expt_name, L, T)
 
     elif index == 1:
         # Train models for single changepoint analysis
