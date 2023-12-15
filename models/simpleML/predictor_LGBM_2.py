@@ -33,7 +33,7 @@ from  lightgbm import LGBMRegressor
 import matplotlib.pylab as plt
 
 
-class LGBMOnlinePredictor:
+class LGBMOnlinePredictor_iterative:
 
     def __init__(self, tau: int = 48, L: int = 720, building_indices=(5, 11, 14, 16, 24, 29),
                     dataset_dir=os.path.join('data', 'example'), lags=[12,24,48]): #analysis
@@ -77,8 +77,9 @@ class LGBMOnlinePredictor:
             building_dataset = building_dfs[int(building_index)]
             x = building_dataset.data[building_dataset.columns.index(dataset_type)][-self.L-self.tau:]
             self.buffer[key] = deque(x, maxlen=len(x))
-            x_lag = building_dataset.data[building_dataset.columns.index(dataset_type)][-self.L-self.tau-max(self.lags):]
-            self.buffer_lag[key] = deque(x_lag, maxlen=len(x_lag))
+            if self.lags:
+                x_lag = building_dataset.data[building_dataset.columns.index(dataset_type)][-self.L-self.tau-max(self.lags):]
+                self.buffer_lag[key] = deque(x_lag, maxlen=len(x_lag))
             
 
         for control_input in self.controlInputs: # load data from validation set into control buffer
@@ -86,8 +87,9 @@ class LGBMOnlinePredictor:
             building_dataset = building_dfs[building_index]
             x = building_dataset.data[building_dataset.columns.index(control_input)][-self.L-self.tau:]
             self.control_buffer[control_input] = deque(x, maxlen=len(x))
-            x_lag = building_dataset.data[building_dataset.columns.index(control_input)][-self.L-self.tau-max(self.lags):]
-            self.control_buffer_lag[control_input] = deque(x_lag, maxlen=len(x_lag))
+            if self.lags:
+                x_lag = building_dataset.data[building_dataset.columns.index(control_input)][-self.L-self.tau-max(self.lags):]
+                self.control_buffer_lag[control_input] = deque(x_lag, maxlen=len(x_lag))
 
     def key2bd(self, key):
         """Extracts the building index and dataset type from a given key.
@@ -180,11 +182,13 @@ class LGBMOnlinePredictor:
         for key in self.training_order:
             building_index, dataset_type = self.key2bd(key)
             self.buffer[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
-            self.buffer_lag[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
+            if self.lags:
+                self.buffer_lag[key].append(current_obs[dataset_type][self.building_indices.index(int(building_index))])
 
         for key in self.controlInputs:
             self.control_buffer[key].append(current_obs_inp[key][0])
-            self.control_buffer_lag[key].append(current_obs_inp[key][0])
+            if self.lags:
+                self.control_buffer_lag[key].append(current_obs_inp[key][0])
 
         # opt out of prediction if buffer not yet full
         if any([len(self.buffer[key]) < self.L for key in self.training_order]):
@@ -209,18 +213,31 @@ class LGBMOnlinePredictor:
 
         for key in self.training_order:
             building_index, dataset_type = self.key2bd(key)
-            # snapshots = np.array([list(self.buffer[key])[-self.L:]])  # get last L observations from buffer
+
+            # Try predicting next time step only, and iteratively predict onwards
+            # # Attempt 1
+            # training_x = np.array([list(self.buffer[key])[-self.L-self.tau:-self.tau]])
+            # training_y = np.array([list(self.buffer[key])[-self.tau:]]).T
+            # for t in range(self.tau-1):
+            #     training_x = np.concatenate([training_x, np.array([list(self.buffer[key])[-self.L-self.tau+t+1:-self.tau+t+1]])], axis=0)            
+            # forecast_x = np.array([list(self.buffer[key])[-self.L:]])
+            # Attempt 2            
             training_x = np.array([list(self.buffer[key])[-self.L-self.tau:-self.tau]]).T
             training_y = np.array([list(self.buffer[key])[-self.L:]]).T
-            forecast_x = np.array([list(self.buffer[key])[-self.tau:]]).T
-            # Try predicting next time step only, and iteratively predict onwards
+            for t in range(self.tau-1):
+                training_x = np.concatenate([training_x, np.array([list(self.buffer[key])[-self.L-self.tau+t+1:-self.tau+t+1]]).T], axis=1)            
+            forecast_x = np.array([list(self.buffer[key])[-self.tau:]])
             
-            for l in self.lags:
-                training_x = np.concatenate([training_x, np.array([list(self.buffer_lag[key])[-self.L-self.tau-l:-self.tau-l]]).T], axis=1)
-                # training_x_lags = np.array([list(self.buffer_lag[key])[-self.L-self.tau-self.lag:-self.tau-self.lag]]).T
-            for l in self.lags:
-                forecast_x = np.concatenate([forecast_x, np.array([list(self.buffer_lag[key])[-self.tau-l:-l]]).T], axis=1)
-                # training_x_lags = np.array([list(self.buffer_lag[key])[-self.L-self.tau-self.lag:-self.tau-self.lag]]).T
+            # print(training_x.shape)
+            # print(training_y.shape)
+            # print(forecast_x.shape)
+            
+            # for l in self.lags:
+            #     training_x = np.concatenate([training_x, np.array([list(self.buffer_lag[key])[-self.L-self.tau-l:-self.tau-l]]).T], axis=1)
+            #     # training_x_lags = np.array([list(self.buffer_lag[key])[-self.L-self.tau-self.lag:-self.tau-self.lag]]).T
+            # for l in self.lags:
+            #     forecast_x = np.concatenate([forecast_x, np.array([list(self.buffer_lag[key])[-self.tau-l:-l]]).T], axis=1)
+            #     # training_x_lags = np.array([list(self.buffer_lag[key])[-self.L-self.tau-self.lag:-self.tau-self.lag]]).T
 
             
             # print(training_x.shape)
@@ -230,18 +247,17 @@ class LGBMOnlinePredictor:
             predictive_model = LGBMRegressor(verbose=-1) #xgboost.XGBRegressor(objective='reg:squarederror') #MultiOutputRegressor(xgboost.XGBRegressor(objective='reg:squarederror')) #self.xgb.copy()
 
         
-            if dataset_type == 'solar':
-                # '''
-                # Fit DMDc to snapshots and control inputs
-                # '''
+            if dataset_type == 'solar_DONOTUSE':
 
                 controlInputs_training = np.array([list(self.control_buffer[key])[-self.L-self.tau:-self.tau] for key in self.controlInputs]).T
-                for l in self.lags:
-                    controlInputs_training = np.concatenate([controlInputs_training, np.array([list(self.control_buffer_lag[key])[-self.L-self.tau-l:-self.tau-l] for key in self.controlInputs]).T], axis=1)
+                for t in range(self.tau-1):
+                    controlInputs_training = np.concatenate([controlInputs_training, np.array([list(self.control_buffer[key])[-self.L-self.tau+t+1:-self.tau+t+1]]).T], axis=1)        
+                # for l in self.lags:
+                #     controlInputs_training = np.concatenate([controlInputs_training, np.array([list(self.control_buffer_lag[key])[-self.L-self.tau-l:-self.tau-l] for key in self.controlInputs]).T], axis=1)
 
                 controlInputs_forecast = np.array([list(self.control_buffer[key])[-self.tau:] for key in self.controlInputs]).T
-                for l in self.lags:
-                    controlInputs_forecast = np.concatenate([controlInputs_forecast, np.array([list(self.control_buffer_lag[key])[-self.tau-l:-l] for key in self.controlInputs]).T], axis=1)
+                # for l in self.lags:
+                #     controlInputs_forecast = np.concatenate([controlInputs_forecast, np.array([list(self.control_buffer_lag[key])[-self.tau-l:-l] for key in self.controlInputs]).T], axis=1)
                 
 
                 # TODO: think about normalisation
@@ -262,40 +278,22 @@ class LGBMOnlinePredictor:
                 forecast = predictive_model.predict(np.concatenate([forecast_x,controlInputs_forecast],axis=1))
 
             else:
-                '''
-                Option to initialise hodmd here (but costly)
-                '''
-                # self.dmdtype='hodmd'
-                # self.dmd_container = HODMD(svd_rank=0.99, svd_rank_extra=0.9, exact=True, opt=True, d=250,
-                #               forward_backward=True,
-                #               sorted_eigs='real')
-                # self.dmd_container.fit(snapshots)
+                
 
                 
                 # predictive_model = LGBMRegressor(verbose=-1) #xgboost.XGBRegressor(objective='reg:squarederror')  #MultiOutputRegressor(xgboost.XGBRegressor(objective='reg:squarederror')) #self.xgb.copy()
                 # print(training_x.shape)
                 # print(training_y.shape)
                 predictive_model.fit(training_x,np.ravel(training_y, order="c")) # ravel due to format of lgbm algorithm
-
-
-                # '''
-                # Optional model improvement via stabilising of eigenvalues
-                # '''
-                # mtuner = ModesTuner(dmd_container)
-                # # mtuner.select('integral_contribution', n=30)
-                # mtuner.select('stable_modes', max_distance_from_unity=1.e-1)
-                # # mtuner.stabilize(inner_radius=0.5, outer_radius=1.5)
-                # tunedDMD = mtuner._dmds[0]
-                # dmd_container = tunedDMD
-
-                # '''
-                # Forecast for 2*tau (double tau so that we can add one on each
-                # timestep to maintain a forecast of tau hours)
-                # '''
-
-                # forecast = dmd_container.reconstructed_data.real[0][self.L:self.L+2*self.tau]
                 
-                forecast = np.ravel(predictive_model.predict(forecast_x))
+                # predict iteratively over tau
+                # print(forecast_x)
+                for t in range(self.tau):
+                    f_next = predictive_model.predict(forecast_x)
+                    forecast_x[0,:-1] = forecast_x[0,1:]
+                    forecast_x[0,-1] = f_next
+                forecast = np.ravel(forecast_x)
+                # print(forecast_x)
             
             
             # plt.figure(figsize=(15,7))
@@ -305,7 +303,7 @@ class LGBMOnlinePredictor:
         
             
             # save forecast to output
-            out[dataset_type].append(forecast[:self.tau])
+            out[dataset_type].append(forecast) #forecast[:self.tau]
 
             # update buffer with new forecast
             # self.forecasts_buffer[key] = forecast[1:] # NOTE: just used first entry from buffer so pre-pop
