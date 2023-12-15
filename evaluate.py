@@ -13,6 +13,8 @@ import time
 import numpy as np
 import cvxpy as cp
 
+import itertools
+
 from tqdm import tqdm
 
 from citylearn.citylearn import CityLearnEnv
@@ -26,10 +28,7 @@ from models import (
     LSTM_Predictor,
     GRU_Predictor,
     GRWN_Predictor,
-    ARIMAPredictor,
-    SARIMAXPredictor,
-    XGBPreTPredictor,
-    LGBMOnlinePredictor
+    LGBMOnlinePredictor_pre_trained
 )
 
 
@@ -66,7 +65,7 @@ def evaluate(predictor,
     # Initialise Predictor object.
     if type(predictor) in [ExamplePredictor, TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
-    elif type(predictor) in [DMSPredictor, ARIMAPredictor,SARIMAXPredictor, LGBMOnlinePredictor]:
+    elif type(predictor) in [DMSPredictor, LGBMOnlinePredictor_pre_trained]:
         predictor.initialise_forecasting(env)
         
     # Initialise Linear MPC object.
@@ -96,7 +95,7 @@ def evaluate(predictor,
 
             # Set up custom data input for method.
             forecast_kwargs = {}
-            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor, LGBMOnlinePredictor, ARIMAPredictor, SARIMAXPredictor]:
+            if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor, GRWN_Predictor, LGBMOnlinePredictor_pre_trained]:
                 forecast_kwargs['t'] = env.time_step
             elif type(predictor) in [DMSPredictor]:
                 forecast_kwargs['train_building_index'] = kwargs['train_building_index']
@@ -220,7 +219,7 @@ if __name__ == '__main__':
 
     save = True
     # model_name = os.path.join('analysis','linear_0')
-    model_name = os.path.join('analysis','LGBM_0')
+    model_name = os.path.join('analysis','LGBM')
 
     train_building_index = None
     results_file = os.path.join('results', 'evaluate_tests_same-train-test--temp.csv')
@@ -228,9 +227,11 @@ if __name__ == '__main__':
     # Instantiate Predictor
     # predictor = DMSPredictor(building_indices=UCam_ids, expt_name=model_name, load=True)
     # predictor = TFT_Predictor(model_group_name='analysis')
-    predictor = LGBMOnlinePredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor)
-    predictor = SARIMAXPredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, use_seasonality=False)
-    predictor = XGBPreTPredictor(len(UCam_ids), tau, "_H1") #(len(lp.b_inds), tau, "_H1")
+    # predictor = LGBMOnlinePredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, lags=list(itertools.chain(range(1, 49), range(72, 721, 24))))
+    # predictor = SARIMAXPredictor(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, use_seasonality=True)
+    # predictor = XGBPreTPredictor(len(UCam_ids), tau, "_H1") #(len(lp.b_inds), tau, "_H1")
+    # predictor = LGBMOnlinePredictor_iterative(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, lags=[])
+    predictor = LGBMOnlinePredictor_pre_trained(building_indices=UCam_ids, dataset_dir = dataset_dir_for_predictor, iterative=False)
 
     # ==================================================================================================================
     # Evaluate and save results
