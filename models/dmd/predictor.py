@@ -16,12 +16,14 @@ You may wish to implement additional methods to make your model code neater.
 import os
 import csv
 import json
+import matplotlib.pyplot as plt
 from collections import deque
 
 import numpy as np
 import pandas as pd
+from IPython.core.display_functions import display
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from pydmd import DMD, DMDc, HODMD, ModesTuner
+from pydmd import DMD, DMDc, HODMD,  ModesTuner
 from pydmd.plotter import plot_eigs
 from models.dmd.utils import Data
 
@@ -29,7 +31,7 @@ from citylearn.citylearn import CityLearnEnv
 
 class Predictor:
 
-    def __init__(self, tau: int = 48, L: int = 720, building_indices=(5, 11, 14, 16, 24, 29),
+    def __init__(self, tau: int = 48, L: int = 720*3, building_indices=(5, 11, 14, 16, 24, 29),
                     dataset_dir=os.path.join('data', 'analysis')):
         """Initialise Prediction object and perform setup.
 
@@ -49,14 +51,19 @@ class Predictor:
         # ====================================================================
         self.dmd = DMD(svd_rank=1)
 
-        self.dmdc = DMDc(svd_rank=-1, opt=True, svd_rank_omega=1)
+        self.dmdc = DMDc(svd_rank=-1, opt=True, svd_rank_omega=0) #recommended settings for solar (svd_rank=-1, opt=True, svd_rank=0) and self.L = 720*3
 
-        self.hodmd_250 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=250, forward_backward=True,
+        # self.hodmd_250 = HODMD(svd_rank=2.99,  exact=True, opt=True, d=250, forward_backward=True,
+        #               sorted_eigs='abs')
+
+        self.hodmd_710 = HODMD(svd_rank=0.81, svd_rank_extra=0.09, exact=True, opt=True, d=715, forward_backward=True,
                       sorted_eigs='real')
+
         self.hodmd_280 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=280, forward_backward=True,
                       sorted_eigs='real')
         self.hodmd_300 = HODMD(svd_rank=0.99,  exact=True, opt=True, d=300, forward_backward=True,
                       sorted_eigs='real')
+
         # ====================================================================
 
         # Create buffer/tracking attributes
@@ -208,55 +215,88 @@ class Predictor:
                 building_index, dataset_type = self.key2bd(key)
                 snapshots = np.array([list(self.buffer[key])[-self.L:]])  # get last L observations from buffer
 
+
+
                 if dataset_type == 'solar':
                     '''
                     Fit DMDc to snapshots and control inputs
                     '''
+                    for key_ in self.controlInputs : print ('shape ', np.array(list(self.control_buffer[key_])).shape)
+                    controlInputs = np.array([list(self.control_buffer[key])[-self.L-2:] for key in self.controlInputs])
 
-                    controlInputs = np.array([list(self.control_buffer[key])[-self.L:] for key in self.controlInputs])
+                    # Normalise snapshots
+                    scaler = MinMaxScaler(feature_range=(0,1))
+                    snapshots_scaled = scaler.fit_transform(snapshots.T)
 
-                    # TODO: think about normalisation
-                    # normalise inputs
-                    # scaler = MinMaxScaler(feature_range=(0,1))
-                    # scaler = scaler.fit(values_tr)
-                    # normalized_snp = scaler.fit_transform(values_tr)
+                    # Concatenate scaled snapshots with non-scaled control inputs (shows significant improvement)
+                    snapshots_scaled = np.concatenate((snapshots_scaled.T, controlInputs), axis=0)
 
-                    #print(t)
-                    #print(snapshots, np.max(snapshots), controlInputs, np.max(controlInputs), snapshots.shape, controlInputs.shape, snapshots[:,-96:], controlInputs[:,-96:])
+                    # print(snapshots, np.max(snapshots), controlInputs, np.max(controlInputs), snapshots.shape, controlInputs.shape, snapshots[:,-96:], controlInputs[:,-96:])
+                    # print ('snapshots shape ', snapshots_scaled.shape)
+                    # print ('control inputs shape ', controlInputs.shape)
 
+                    # Fit dmdc to snapshots + control inputs
                     dmd_container = self.dmdc
-                    dmd_container.fit(snapshots, controlInputs[:,:-1]) # np.vstack([snapshots,controlInputs])
+                    dmd_container.fit(snapshots_scaled, controlInputs[:,1:],) # np.vstack([snapshots,controlInputs])
+
+                    # Optional eigenvalue analysis
+                    # plot_eigs(dmd_container, show_axes=True, show_unit_circle=True, figsize=(5, 5))
+                    # for eig in dmd_container.eigs:
+                    #     print(
+                    #         "Eigenvalue {}: distance from unit circle {}".format(
+                    #             eig, np.abs(1 - np.linalg.norm(eig))
+                    #         )
+                    #     )
 
                     '''
                     Optional model improvement via stabilising of eigenvalues
                     '''
                     mtuner = ModesTuner(dmd_container)
                     # mtuner.select('integral_contribution', n=30)
-                    mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
+                    mtuner.select('stable_modes', max_distance_from_unity=0.8)
                     # mtuner.stabilize(inner_radius=-1.e-2, outer_radius=1.e-2)
                     tunedDMD = mtuner._dmds[0]
-                    dmd_container = tunedDMD
+                    # dmd_container = tunedDMD
+
+                    # dmd_container
 
                     # NOTE: perfect forcing forecasts is cheating somewhat
+
                     future_df = pd.DataFrame({ # get future control inputs - padding to length L with zeros (avoid termination error)
                         'Diffuse Solar Radiation [W/m2]': np.pad(self.dif_irads[t:t+self.L], (0,self.L-len(self.dif_irads[t:t+self.L])), mode='constant'),
                         'Direct Solar Radiation [W/m2]': np.pad(self.dir_irads[t:t+self.L], (0,self.L-len(self.dir_irads[t:t+self.L])), mode='constant')
                     })
+
                     forecast_controlInput = future_df[['Diffuse Solar Radiation [W/m2]', 'Direct Solar Radiation [W/m2]']].to_numpy()
-                    forecast_controlInput = forecast_controlInput[:-1].T
+                    forecast_controlInput = forecast_controlInput[1:].T
 
                     '''
                     Forecast for 2*tau (double tau so that we can
                     add one on each timestep to maintain a forecast of tau hours)
                     '''
 
-                    reconstruction = dmd_container.reconstructed_data().real # reconstruct data over training window
-                    full_forecast = dmd_container.reconstructed_data(forecast_controlInput).real # forecast for L periods using future control inputs
-                    # denormalised_ forecast = scaler.inverse_transform(forecast_norm)
+                    # reconstruction = dmd_container.reconstructed_data().real # reconstruct data over training window
+                    # reconstruction_descaled = scaler.inverse_transform(reconstruction)
 
-                    forecast = full_forecast[0,:2*self.tau]
+                    full_forecast_scaled = dmd_container.reconstructed_data(forecast_controlInput).real # forecast for L periods using future control inputs
+                    full_forecast_descaled = scaler.inverse_transform(full_forecast_scaled)
+
+                    forecast = full_forecast_descaled[0,:2*self.tau]
+
+                    # Optional plotting of reconstructed dmd training data
+                    # plt.plot(reconstruction_descaled[0].T, c='r')
+                    # plt.plot(snapshots[0].T, c='k')
+
+                    # Optional plotting of full forecasted dmd test data
+                    # plt.plot(full_forecast_descaled[0].T, c='r', linestyle= ':')
+
+                    # plt.show()
 
                 else:
+
+                    print('building index: ', building_index)
+                    print ('time: ', t)
+
                     '''
                     Option to initialise hodmd here (but costly)
                     '''
@@ -266,32 +306,84 @@ class Predictor:
                     #               sorted_eigs='real')
                     # self.dmd_container.fit(snapshots)
 
+                    '''
+                    Normalize data 
+                    '''
+
+                    # print ('snapshots  ', snapshots.shape)
+
+                    # scaler = MinMaxScaler(feature_range=(0,1),copy=True)
+                    scaler = StandardScaler(with_std=True, with_mean=True, copy=True)
+                    print ('shape of snapshots ', snapshots.shape)
+                    scaler = scaler.fit(snapshots.T)
+                    # print ('stacked snaps ', snapshots[0][:, np.newaxis])
+                    # scaler = scaler.fit(snapshots[0][:, np.newaxis])
+                    # snapshots_scaled = scaler.transform(snapshots[0][:, np.newaxis]).T
+                    snapshots_scaled = scaler.transform(snapshots.T).T
+
+                    # print('snapshots', snapshots)
+
                     def setcontainer ():
-                        if key == 'load_5': return self.hodmd_250
-                        elif key == 'load_24': return self.hodmd_280
-                        else: return self.hodmd_300
+                        if key == 'load_5': return self.hodmd_710
+                        if key == 'load_11': return self.hodmd_710
+                        if key == 'load_14' : return self.hodmd_710
+                        if key == 'load_24': return self.hodmd_710
+                        if key == 'load_29': return self.hodmd_710
+                        else: return self.hodmd_710
+
 
                     dmd_container = setcontainer()
-                    dmd_container.fit(snapshots)
-                    dmd_container.dmd_time['tend'] = (2*self.tau + self.L) - 1
+                    dmd_container.fit(snapshots_scaled)
+                    dmd_container.dmd_time['tend'] = (2*self.tau+ self.L) - 1
+                    # dmd_container.dmd_time['tend'] = (self.L + self.L) - 1
+
+                    print ('number of modes ', dmd_container.modes.shape)
 
                     '''
                     Optional model improvement via stabilising of eigenvalues
                     '''
                     mtuner = ModesTuner(dmd_container)
-                    # mtuner.select('integral_contribution', n=30)
-                    mtuner.select('stable_modes', max_distance_from_unity=1.e-1)
-                    # mtuner.stabilize(inner_radius=0.5, outer_radius=1.5)
+                    # mtuner.select('integral_contribution', n=100)
+                    # mtuner.select('stable_modes', max_distance_from_unity=1.e-2)
+                    mtuner.stabilize(inner_radius=1.e-2)
                     tunedDMD = mtuner._dmds[0]
                     dmd_container = tunedDMD
+
+                    # plot_eigs(dmd_container, show_axes=True, show_unit_circle=True, figsize=(5, 5))
+                    # for eig in dmd_container.eigs:
+                    #     print(
+                    #         "Eigenvalue {}: distance from unit circle {}".format(
+                    #             eig, np.abs(1 - np.linalg.norm(eig))
+                    #         )
+                    #     )
+                    # plt.show()
+
+                    # TODO: try non-normalized control inputs again
 
                     '''
                     Forecast for 2*tau (double tau so that we can add one on each
                     timestep to maintain a forecast of tau hours)
                     '''
+                    reconstruction_scaled = dmd_container.reconstructed_data.real
+                    reconstruction_descaled = scaler.inverse_transform(reconstruction_scaled)
+                    print ('shape of reconstructed ', reconstruction_descaled.shape)
 
-                    forecast = dmd_container.reconstructed_data.real[0][self.L:self.L+2*self.tau]
+                    forecast_scaled = dmd_container.reconstructed_data.real[0][self.L:self.L+2*self.tau] # (96, )
+                    forecast = scaler.inverse_transform(forecast_scaled.reshape(-1,1))
+                    print ('forecast scaled shape ', forecast_scaled.shape)
+                    size = self.L - (2*self.tau) # 624
+                    # print ('size ',size)
+                    # add zero padding (624)
+                    # forecast_scaled = np.array(list(forecast_scaled.T) + list([0] * (size)))
+                    # forecast = scaler.inverse_transform(forecast_scaled.reshape(-1,1).T)[0][:2*self.tau]
+                    # forecast = np.array(list(forecast_scaled.T) + list([0] * (size)))
 
+                    # # # Optional plotting of reconstructed dmd training data
+                    plt.plot(forecast, c='r')
+                    # plt.plot(reconstruction_descaled[0].T, c='r')
+                    # plt.plot(snapshots[0].T, c='k')
+                    # plt.show()
+                print ('forecast shape ', forecast.shape)
                 # save forecast to output
                 out[dataset_type].append(forecast[:self.tau])
 

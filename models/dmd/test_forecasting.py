@@ -252,7 +252,7 @@ if __name__ == '__main__':
         schema_path = os.path.join('data', dataset_dir, 'schema.json')
 
         print("Initialising predictor.")
-        predictor = DMDPredictor(building_indices=UCam_ids,dataset_dir=os.path.join('data','example'))
+        predictor = DMDPredictor(building_indices=UCam_ids, dataset_dir=os.path.join('data','example'))
 
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', module=r'cvxpy')
@@ -264,7 +264,7 @@ if __name__ == '__main__':
         idx_start = 0
         idx_end = idx_start+duration
 
-        plot_variable = 'carbon'
-        variable_logs = logs[3] #logs[0][list(logs[0].keys())[2]]
+        plot_variable = 'load'
+        variable_logs =  logs[0][list(logs[0].keys())[2]] #logs[1]
 
         interactive_plot(variable_logs, plot_variable, tau, idx_start, idx_end, val_max=1000)
