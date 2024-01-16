@@ -23,7 +23,8 @@ from models import (
     DeepAR_Predictor,
     LSTM_Predictor,
     GRU_Predictor,
-    GRWN_Predictor
+    GRWN_Predictor,
+    BuildingForecastsOnlyWrapper
 )
 
 
@@ -93,7 +94,7 @@ def assess(predictor, schema_path, tau, building_breakdown=False, **kwargs):
     # Initialise Predictor object.
     if type(predictor) in [TFT_Predictor, NHiTS_Predictor, DeepAR_Predictor, LSTM_Predictor, GRU_Predictor]:
         predictor.initialise_forecasting(tau, env)
-    elif type(predictor) in [DMSPredictor]:
+    elif type(predictor) in [DMSPredictor,BuildingForecastsOnlyWrapper]:
         predictor.initialise_forecasting(env)
 
     # ========================================================================
