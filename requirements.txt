@@ -4,5 +4,6 @@ pytorch-forecasting==0.10.3
 lightning==2.0.1
 tensorboard==2.12.1
 ipython==8.12.3
+ipykernel==6.29.4
 pydmd==0.4.1.post2311
 cvxpy==1.3.0
